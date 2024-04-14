@@ -1,6 +1,6 @@
 login=false
 create_cluster=false
-install_mcperf=false
+install_mcperf=true
 log="log.txt"
 
 output () {
@@ -10,7 +10,7 @@ output () {
 }
 
 compute_remote () {
-    gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $log
+    gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2"
 }
 
 set_env_variables () {
@@ -40,12 +40,11 @@ create_cluster () {
 install_mcperf () {
     # install modified version of mcperf on client-agent-a and client-agent-b
     output "[process] install mcperf..."
-    # for nodetype in "client-agent-a" "client-agent-b" "client-measure"; do
-    for nodetype in "client-agent-a"; do
 
+    for nodetype in "client-agent-a" "client-agent-b" "client-measure"; do
         machine=$(kubectl get nodes -l cca-project-nodetype=$nodetype -o=jsonpath='{.items[*].metadata.name}')
 
-        output "[process] install mcperf on" $machine "..."
+        output "[process] install mcperf on $machine ..."
 
         compute_remote $machine "sudo sh -c 'echo deb-src http://europe-west3.gce.archive.ubuntu.com/ubuntu/ jammy main restricted >> /etc/apt/sources.list'"
         compute_remote $machine "sudo apt-get update"
@@ -64,8 +63,17 @@ install_mcperf () {
         fi
 
         if [[ $variable == "client-measure" ]]; then
-            compute_remote $machine "./mcperf -s MEMCACHED_IP --loadonly"
-            compute_remote $machine "./mcperf -s MEMCACHED_IP -a INTERNAL_AGENT_A_IP -a INTERNAL_AGENT_B_IP  --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5"
+            # we run memcache-server on node 3
+            memcached_ip=$(kubectl get nodes -l cca-project-nodetype=node-c-8core -o=jsonpath='{.items[*].metadata.internal-ip}')
+            a_ip=$(kubectl get nodes -l cca-project-nodetype=node-a-2core -o=jsonpath='{.items[*].metadata.internal-ip}')
+            b_ip=$(kubectl get nodes -l cca-project-nodetype=node-b-4core -o=jsonpath='{.items[*].metadata.internal-ip}')
+
+            echo "internal ip of memcache server is $memcached_ip"
+            echo "internal ip of memcache server is $a_ip"
+            echo "internal ip of memcache server is $b_ip"
+
+            compute_remote $machine "./mcperf -s $memcached_ip --loadonly"
+            compute_remote $machine "./mcperf -s $memcached_ip -a $a_ip -a $b_ip  --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5"
         fi
     done
 }
@@ -84,16 +92,17 @@ parsec_jobs () {
     )
 
     for i in "${parsec[@]}"; do
-        kubectl create -f parsec-benchmarks/part2a/parsec-"$i".yaml
+        kubectl create -f parsec-benchmarks/part3/parsec-"$i".yaml
     done
 
     for i in "${parsec[@]}"; do
         kubectl wait --timeout=600s --for=condition=complete job/parsec-"$i" >> $log
 
-        out=$(kubectl logs $(kubectl get pods --selector=job-name="$i" --output=jsonpath='{.items[*].metadata.name}'))
-        
-        echo "[$i, $inter]" >> "output.txt"
-        echo $out >> "output.txt"
+        output "[status] $i completed"
+
+        # out=$(kubectl logs $(kubectl get pods --selector=job-name="$i" --output=jsonpath='{.items[*].metadata.name}'))
+        # echo "[$i, $inter]" >> "output.txt"
+        # echo $out >> "output.txt"
     done
 }
 
