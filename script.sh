@@ -1,4 +1,5 @@
-login=false
+# DONT FORGET TO CHANGE YAML NETHZ USER
+# Login user using 'gcloud auth application-default login'
 create_cluster=false
 install_mcperf=true
 log="log.txt"
@@ -17,11 +18,6 @@ set_env_variables () {
     output "[process] setting variables..."
     export KOPS_STATE_STORE=gs://cca-eth-2024-group-022-bucherjo/
     PROJECT='gcloud config get-value project'
-}
-
-login_user () {
-    output "[process] logging in user..."
-    gcloud auth application-default login
 }
 
 create_cluster () {
@@ -99,18 +95,10 @@ parsec_jobs () {
         kubectl wait --timeout=600s --for=condition=complete job/parsec-"$i" >> $log
 
         output "[status] $i completed"
-
-        # out=$(kubectl logs $(kubectl get pods --selector=job-name="$i" --output=jsonpath='{.items[*].metadata.name}'))
-        # echo "[$i, $inter]" >> "output.txt"
-        # echo $out >> "output.txt"
     done
 }
 
 set_env_variables
-
-if "$login"; then
-    login_user
-fi
 
 if "$create_cluster"; then
     create_cluster
