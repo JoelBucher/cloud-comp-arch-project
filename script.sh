@@ -22,13 +22,13 @@ set_env_variables () {
 
 create_cluster () {
     output "[process] creating part3..."
-    kops create -f part3.yaml >> $log
+    kops create -f part3.yaml
 
     output "[process] updating cluster..."
-    kops update cluster --name part3.k8s.local --yes --admin >> $log
+    kops update cluster --name part3.k8s.local --yes --admin
 
     output "[process] validating cluster..."
-    kops validate cluster --wait 10m >> $log
+    kops validate cluster --wait 10m
 
     kubectl get nodes -o wide
 }
@@ -47,8 +47,7 @@ install_mcperf () {
         compute_remote $machine "sudo apt-get install libevent-dev libzmq3-dev git make g++ --yes"
         compute_remote $machine "sudo apt-get build-dep memcached --yes"
         compute_remote $machine "git clone https://github.com/eth-easl/memcache-perf-dynamic.git"
-        compute_remote $machine "cd memcache-perf-dynamic"
-        compute_remote $machine "make"
+        compute_remote $machine "cd memcache-perf-dynamic && make"
 
         if [[ $variable == "client-agent-a" ]]; then
             compute_remote $machine "./mcperf -T 2 -A"
@@ -107,7 +106,7 @@ fi
 if "$install_mcperf"; then
     install_mcperf
 fi
-
+exit
 
 parsec_jobs
 
