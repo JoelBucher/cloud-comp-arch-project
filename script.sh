@@ -1,7 +1,8 @@
 # DONT FORGET TO CHANGE YAML NETHZ USER
 # Login user using 'gcloud auth application-default login'
 create_cluster=false
-install_mcperf=true
+install_mcperf=false
+run_memcached=true
 log="log.txt"
 
 output () {
@@ -77,12 +78,6 @@ install_mcperf () {
 parsec_jobs () {
     output "[process] starting parsec jobs..."
     parsec=(
-        blackscholes
-        canneal
-        dedup
-        ferret
-        freqmine
-        radix
         vips
     )
 
@@ -97,6 +92,13 @@ parsec_jobs () {
     done
 }
 
+run_memcached () {
+    kubectl create -f memcache-t1-cpuset.yaml
+    kubectl expose pod some-memcached --name some-memcached-11211  --type LoadBalancer --port 11211 --protocol TCP
+    sleep 60
+    kubectl get service some-memcached-11211
+}
+
 set_env_variables
 
 if "$create_cluster"; then
@@ -106,7 +108,10 @@ fi
 if "$install_mcperf"; then
     install_mcperf
 fi
-exit
+
+if "$run_memcached"; then
+    run_memcached
+fi 
 
 parsec_jobs
 
