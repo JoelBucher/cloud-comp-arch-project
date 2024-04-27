@@ -1,7 +1,7 @@
 # DONT FORGET TO CHANGE YAML NETHZ USER
 # Login user using 'gcloud auth application-default login'
-create_cluster=false
-install_mcperf=false
+create_cluster=true
+install_mcperf=true
 run_memcached=true
 log="log.txt"
 
@@ -50,26 +50,29 @@ install_mcperf () {
         compute_remote $machine "git clone https://github.com/eth-easl/memcache-perf-dynamic.git"
         compute_remote $machine "cd memcache-perf-dynamic && make"
 
-        if [[ $variable == "client-agent-a" ]]; then
-            compute_remote $machine "./mcperf -T 2 -A"
+        if [[ $nodetype == "client-agent-a" ]]; then
+            compute_remote $machine "nohup cd memcache-perf-dynamic && ./mcperf -T 2 -A &"
+            a_ip=$(kubectl get nodes $machine -o=jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
         fi
 
-        if [[ $variable == "client-agent-b" ]]; then
-            compute_remote $machine "./mcperf -T 4 -A"
+        if [[ $nodetype == "client-agent-b" ]]; then
+            compute_remote $machine "nohup cd memcache-perf-dynamic && ./mcperf -T 4 -A &"
+            b_ip=$(kubectl get nodes $machine -o=jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
         fi
 
-        if [[ $variable == "client-measure" ]]; then
+        if [[ $nodetype == "client-measure" ]]; then
             # we run memcache-server on node 3
-            memcached_ip=$(kubectl get nodes -l cca-project-nodetype=node-c-8core -o=jsonpath='{.items[*].metadata.internal-ip}')
-            a_ip=$(kubectl get nodes -l cca-project-nodetype=node-a-2core -o=jsonpath='{.items[*].metadata.internal-ip}')
-            b_ip=$(kubectl get nodes -l cca-project-nodetype=node-b-4core -o=jsonpath='{.items[*].metadata.internal-ip}')
+            memcached_ip=$(kubectl get nodes $machine -o=jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
 
             echo "internal ip of memcache server is $memcached_ip"
-            echo "internal ip of memcache server is $a_ip"
-            echo "internal ip of memcache server is $b_ip"
+            echo "internal ip of agent A is $a_ip"
+            echo "internal ip of agent B is $b_ip"
 
-            compute_remote $machine "./mcperf -s $memcached_ip --loadonly"
-            compute_remote $machine "./mcperf -s $memcached_ip -a $a_ip -a $b_ip  --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5"
+            output "[process] loading memcached..."
+            compute_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcached_ip --loadonly"
+            
+            output "[process] starting memcached..."
+            compute_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcached_ip -a $a_ip -a $b_ip  --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5"
         fi
     done
 }
@@ -78,6 +81,12 @@ install_mcperf () {
 parsec_jobs () {
     output "[process] starting parsec jobs..."
     parsec=(
+        blackscholes
+        canneal
+        dedup
+        ferret
+        freqmine
+        radix
         vips
     )
 
@@ -93,6 +102,7 @@ parsec_jobs () {
 }
 
 run_memcached () {
+    output "[process] creating memcached..."
     kubectl create -f memcache-t1-cpuset.yaml
     kubectl expose pod some-memcached --name some-memcached-11211  --type LoadBalancer --port 11211 --protocol TCP
     sleep 60
@@ -105,13 +115,14 @@ if "$create_cluster"; then
     create_cluster
 fi
 
+if "$run_memcached"; then
+    run_memcached
+fi 
+
 if "$install_mcperf"; then
     install_mcperf
 fi
 
-if "$run_memcached"; then
-    run_memcached
-fi 
 
 parsec_jobs
 
