@@ -1,7 +1,7 @@
 # DONT FORGET TO CHANGE YAML NETHZ USER
 # Login user using 'gcloud auth application-default login'
-create_cluster=true
-install_mcperf=true
+create_cluster=false
+install_mcperf=false
 run_memcached=true
 log="log.txt"
 
@@ -62,7 +62,7 @@ install_mcperf () {
 
         if [[ $nodetype == "client-measure" ]]; then
             # we run memcache-server on node 3
-            memcached_ip=$(kubectl get nodes $machine -o=jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+            memcached_ip=$(kubectl get pods some-memcached -o=jsonpath='{.status.podIP}')
 
             echo "internal ip of memcache server is $memcached_ip"
             echo "internal ip of agent A is $a_ip"
@@ -72,7 +72,6 @@ install_mcperf () {
             compute_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcached_ip --loadonly"
             
             output "[process] starting memcached..."
-            compute_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcached_ip -a $a_ip -a $b_ip  --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5"
         fi
     done
 }
