@@ -1,9 +1,14 @@
 # DONT FORGET TO CHANGE YAML NETHZ USER
 # Login user using 'gcloud auth application-default login'
 create_cluster=false
-install_mcperf=false
-run_memcached=false
+install_mcperf=true
+run_memcached=true
+
 log="log.txt"
+client_a_log="client_a.log"
+client_b_log="client_b.log"
+client_measure_log="client_measure.log"
+result_file="results.json"
 
 output () {
     RED='\033[0;31m'
@@ -11,14 +16,23 @@ output () {
     echo "${RED}$1${NC}"
 }
 
+compute_background_remote () {
+    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $3 &
+}
+
 compute_remote () {
     gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2"
 }
 
-set_env_variables () {
+create_environment () {
     output "[process] setting variables..."
     export KOPS_STATE_STORE=gs://cca-eth-2024-group-022-bucherjo/
     PROJECT='gcloud config get-value project'
+
+    rm $client_a_log
+    rm $client_b_log
+    rm $client_measure_log
+    rm $result_file
 }
 
 create_cluster () {
@@ -51,15 +65,15 @@ install_mcperf () {
         compute_remote $machine "cd memcache-perf-dynamic && make"
 
         if [[ $nodetype == "client-agent-a" ]]; then
-            compute_remote $machine "nohup cd memcache-perf-dynamic && ./mcperf -T 2 -A &"
+            compute_background_remote $machine "cd memcache-perf-dynamic && ./mcperf -T 2 -A" $client_a_log
             a_ip=$(kubectl get nodes $machine -o=jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
         fi
 
         if [[ $nodetype == "client-agent-b" ]]; then
-            compute_remote $machine "nohup cd memcache-perf-dynamic && ./mcperf -T 4 -A &"
+            compute_background_remote $machine "cd memcache-perf-dynamic && ./mcperf -T 4 -A" $client_b_log
             b_ip=$(kubectl get nodes $machine -o=jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
         fi
-
+       
         if [[ $nodetype == "client-measure" ]]; then
             # we run memcache-server on node 3
             memcached_ip=$(kubectl get pods some-memcached -o=jsonpath='{.status.podIP}')
@@ -72,7 +86,7 @@ install_mcperf () {
             compute_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcached_ip --loadonly"
             
             output "[process] starting memcached..."
-            compute_remote $machine "nohup cd memcache-perf-dynamic && ./mcperf -s $memcached_ip -a $a_ip -a $b_ip --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5 >> percentile.log &"
+            compute_background_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcached_ip -a $a_ip -a $b_ip --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5" $client_measure_log
         fi
     done
 }
@@ -109,10 +123,15 @@ run_memcached () {
     kubectl get service some-memcached-11211
 }
 
-set_env_variables
+create_environment
 
 if "$create_cluster"; then
     create_cluster
+else 
+    output "[process] clean up cluster..."
+    kubectl delete jobs --all
+    kubectl delete service some-memcached-11211
+    kubectl delete pod some-memcached
 fi
 
 if "$run_memcached"; then
@@ -126,7 +145,7 @@ fi
 parsec_jobs
 
 output "[process] running tests..."
-kubectl get pods -o json > results.json
-python3 get_time.py results.json
+kubectl get pods -o json > $result_file
+python3 get_time.py $result_file
 
 output "[success] all running"
