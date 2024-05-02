@@ -1,8 +1,11 @@
 # DONT FORGET TO CHANGE YAML NETHZ USER
 # Login user using 'gcloud auth application-default login'
-create_cluster=false
+create_cluster=true
 install_mcperf=true
 run_memcached=true
+
+# Scheduling Policy
+scheduling_policy="./policies/start_all"
 
 log="log.txt"
 client_a_log="client_a.log"
@@ -17,7 +20,7 @@ output () {
 }
 
 compute_background_remote () {
-    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $3 &
+    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $scheduling_policy/$3 &
 }
 
 compute_remote () {
@@ -29,10 +32,10 @@ create_environment () {
     export KOPS_STATE_STORE=gs://cca-eth-2024-group-022-bucherjo/
     PROJECT='gcloud config get-value project'
 
-    rm $client_a_log
-    rm $client_b_log
-    rm $client_measure_log
-    rm $result_file
+    rm $scheduling_policy/$client_a_log
+    rm $scheduling_policy/$client_b_log
+    rm $scheduling_policy/$client_measure_log
+    rm $scheduling_policy/$result_file
 }
 
 create_cluster () {
@@ -93,26 +96,8 @@ install_mcperf () {
 
 # run PARSEC jobs from tasks 1 & 2
 parsec_jobs () {
-    output "[process] starting parsec jobs..."
-    parsec=(
-        blackscholes
-        canneal
-        dedup
-        ferret
-        freqmine
-        radix
-        vips
-    )
-
-    for i in "${parsec[@]}"; do
-        kubectl create -f parsec-benchmarks/part3/parsec-"$i".yaml
-    done
-
-    for i in "${parsec[@]}"; do
-        kubectl wait --timeout=600s --for=condition=complete job/parsec-"$i" >> $log
-
-        output "[status] $i completed"
-    done
+    output "[process] invoking parsec scheduling policy..."
+    sh $scheduling_policy/policy.sh
 }
 
 run_memcached () {
@@ -145,7 +130,7 @@ fi
 parsec_jobs
 
 output "[process] running tests..."
-kubectl get pods -o json > $result_file
-python3 get_time.py $result_file
+kubectl get pods -o json > $scheduling_policy/$result_file
+python3 get_time.py $scheduling_policy/$result_file
 
 output "[success] all running"
