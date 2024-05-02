@@ -1,4 +1,4 @@
-source "functions.sh"
+source "../functions.sh"
 
 parsec=(
     blackscholes

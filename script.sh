@@ -1,22 +1,52 @@
-# DONT FORGET TO CHANGE YAML NETHZ USER
-# Login user using 'gcloud auth application-default login'
+
+# Settings
+user=bucherjo
 create_cluster=true
 install_mcperf=true
 run_memcached=true
+interactive_mode=true
 
 # Scheduling Policy
 scheduling_policy="./policies/start_all"
 
-log="log.txt"
+# Files
 client_a_log="client_a.log"
 client_b_log="client_b.log"
 client_measure_log="client_measure.log"
 result_file="results.json"
+cluster_yaml=
 
 output () {
     RED='\033[0;31m'
     NC='\033[0m' # No Color
     echo "${RED}$1${NC}"
+}
+
+interactive_mode(){
+    echo "* -------------------------------------- *"
+    echo "|           Awesome CCA Script           |"
+    echo "* -------------------------------------- *"
+    echo ""
+    echo "user \t\t\t $user"
+    echo "scheduling policy \t $scheduling_policy"
+    echo "create cluster \t\t $( [ "$create_cluster" = "true" ] && echo "✅" || echo "❌" )"
+    echo "install mcperf \t\t $( [ "$install_mcperf" = "true" ] && echo "✅" || echo "❌" )"
+    echo "run memcached \t\t $( [ "$run_memcached" = "true" ] && echo "✅" || echo "❌" )"
+    echo ""
+    echo ""
+    echo "[Note]: Please make sure that you execute this command in your current active shell before you start the script"
+    echo "gcloud auth login && gcloud auth application-default login"
+    echo ""
+    while true; do
+        read -p "Do you want to proceed? (y/n) " yn
+        case $yn in 
+            [yY] ) echo "starting script...";
+                break;;
+            [nN] ) echo "exiting...";
+                exit;;
+            * ) echo invalid response;;
+        esac
+    done
 }
 
 compute_background_remote () {
@@ -39,8 +69,13 @@ create_environment () {
 }
 
 create_cluster () {
+    generated_yaml=./generated/$user-part3.yaml
+
+    output "[process] generating cluster files"
+    sed 's/NETHZ/insert/g' part3.yaml > $generated_yaml
+
     output "[process] creating part3..."
-    kops create -f part3.yaml
+    kops create -f $generated_yaml
 
     output "[process] updating cluster..."
     kops update cluster --name part3.k8s.local --yes --admin
@@ -107,6 +142,10 @@ run_memcached () {
     sleep 60
     kubectl get service some-memcached-11211
 }
+
+if "$interactive_mode"; then
+    interactive_mode
+fi
 
 create_environment
 
