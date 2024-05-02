@@ -546,3 +546,16 @@ job.batch/parsec-ferret condition met
 job.batch/parsec-freqmine condition met
 job.batch/parsec-radix condition met
 job.batch/parsec-vips condition met
+job.batch/parsec-blackscholes condition met
+job.batch/parsec-canneal condition met
+job.batch/parsec-dedup condition met
+job.batch/parsec-ferret condition met
+job.batch/parsec-freqmine condition met
+job.batch/parsec-radix condition met
+job.batch/parsec-blackscholes condition met
+job.batch/parsec-canneal condition met
+job.batch/parsec-dedup condition met
+job.batch/parsec-ferret condition met
+job.batch/parsec-freqmine condition met
+job.batch/parsec-radix condition met
+job.batch/parsec-vips condition met

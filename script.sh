@@ -2,7 +2,7 @@
 # Login user using 'gcloud auth application-default login'
 create_cluster=false
 install_mcperf=false
-run_memcached=true
+run_memcached=false
 log="log.txt"
 
 output () {
@@ -72,6 +72,7 @@ install_mcperf () {
             compute_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcached_ip --loadonly"
             
             output "[process] starting memcached..."
+            compute_remote $machine "nohup cd memcache-perf-dynamic && ./mcperf -s $memcached_ip -a $a_ip -a $b_ip --noload -T 6 -C 4 -D 4 -Q 1000 -c 4 -t 10 --scan 30000:30500:5 >> percentile.log &"
         fi
     done
 }
@@ -121,7 +122,6 @@ fi
 if "$install_mcperf"; then
     install_mcperf
 fi
-
 
 parsec_jobs
 
