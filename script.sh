@@ -1,20 +1,19 @@
 
 # Settings
 user=bucherjo
-create_cluster=true
+create_cluster=false
 install_mcperf=true
 run_memcached=true
 interactive_mode=true
 
 # Scheduling Policy
-scheduling_policy="./policies/start_all"
+scheduling_policy="./policies/nodes"
 
 # Files
 client_a_log="client_a.log"
 client_b_log="client_b.log"
 client_measure_log="client_measure.log"
 result_file="results.json"
-cluster_yaml=
 
 output () {
     RED='\033[0;31m'
@@ -59,7 +58,7 @@ compute_remote () {
 
 create_environment () {
     output "[process] setting variables..."
-    export KOPS_STATE_STORE=gs://cca-eth-2024-group-022-bucherjo/
+    export KOPS_STATE_STORE=gs://cca-eth-2024-group-022-$user/
     PROJECT='gcloud config get-value project'
 
     rm $scheduling_policy/$client_a_log
@@ -69,10 +68,10 @@ create_environment () {
 }
 
 create_cluster () {
-    generated_yaml=./generated/$user-part3.yaml
+    generated_yaml=./generated/part3.yaml
 
     output "[process] generating cluster files"
-    sed 's/NETHZ/insert/g' part3.yaml > $generated_yaml
+    sed "s/NETHZ/$user/g" part3.yaml > $generated_yaml
 
     output "[process] creating part3..."
     kops create -f $generated_yaml
@@ -131,6 +130,9 @@ install_mcperf () {
 
 # run PARSEC jobs from tasks 1 & 2
 parsec_jobs () {
+    output "[process] clean up jobs..."
+    kubectl delete jobs --all
+
     output "[process] invoking parsec scheduling policy..."
     sh $scheduling_policy/policy.sh
 }
@@ -151,14 +153,12 @@ create_environment
 
 if "$create_cluster"; then
     create_cluster
-else 
-    output "[process] clean up cluster..."
-    kubectl delete jobs --all
-    kubectl delete service some-memcached-11211
-    kubectl delete pod some-memcached
 fi
 
 if "$run_memcached"; then
+    output "[process] clean up memcached..."
+    kubectl delete service some-memcached-11211
+    kubectl delete pod some-memcached
     run_memcached
 fi 
 

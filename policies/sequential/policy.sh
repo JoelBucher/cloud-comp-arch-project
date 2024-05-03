@@ -1,4 +1,4 @@
-source "../functions.sh"
+source "./policies/functions.sh"
 
 parsec=(
     blackscholes
