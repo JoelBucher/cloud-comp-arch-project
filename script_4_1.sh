@@ -59,7 +59,6 @@ create_environment () {
     rm $4_1_logs/$memcache_server_log_4_1
     rm $4_1_logs/$client_agent_log_4_1
     rm $4_1_logs/$client_measure_log_4_1
-    rm $4_1_logs/$result_file_4_1
 }
 
 create_cluster () {
@@ -176,8 +175,5 @@ fi
 if "$install_mcperf"; then
     install_mcperf
 fi
-
-output "[process] running tests..."
-kubectl get pods -o json > $4_1_logs/$result_file_4_1
 
 output "[success] all running"
