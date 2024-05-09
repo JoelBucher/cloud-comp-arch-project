@@ -131,18 +131,6 @@ install_mcperf () {
 
             output "[process] loading memcached..."
             compute_remote $machine "./mcperf -s $memcache_server_ip --loadonly"
-            
-            output "[process] starting memcached T = 1, C = 1"
-            compute_background_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 1 -C 1 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000" $client_measure_log_4_1
-            
-            output "[process] starting memcached T = 1, C = 2"
-            compute_background_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 1 -C 2 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000" $client_measure_log_4_1
-            
-            output "[process] starting memcached T = 2, C = 1"
-            compute_background_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 2 -C 1 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000" $client_measure_log_4_1
-            
-            output "[process] starting memcached T = 2, C = 2"
-            compute_background_remote $machine "cd memcache-perf-dynamic && ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 2 -C 2 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000" $client_measure_log_4_1
         fi
     done
 }
@@ -177,3 +165,6 @@ if "$install_mcperf"; then
 fi
 
 output "[success] all running"
+
+# manually ssh into server and mesure with
+# ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 1 -C 1 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000
