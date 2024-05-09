@@ -166,5 +166,5 @@ fi
 
 output "[success] all running"
 
-# manually ssh into server and mesure with
+# manually ssh into measure and mesure with
 # ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 1 -C 1 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000
