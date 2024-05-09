@@ -135,30 +135,32 @@ install_mcperf () {
     done
 }
 
-run_memcached () {
-    output "[process] creating memcached..."
-    kubectl create -f memcache-t1-cpuset.yaml
-    kubectl expose pod some-memcached --name some-memcached-11211  --type LoadBalancer --port 11211 --protocol TCP
-    sleep 60
-    kubectl get service some-memcached-11211
-}
+# should not be needed 
+#run_memcached () {
+#    output "[process] creating memcached..."
+#    kubectl create -f memcache-t1-cpuset.yaml
+#    kubectl expose pod some-memcached --name some-memcached-11211  --type LoadBalancer --port 11211 --protocol TCP
+#   sleep 60
+#    kubectl get service some-memcached-11211
+#}
 
 if "$interactive_mode"; then
     interactive_mode
 fi
 
-create_environment
 
 if "$create_cluster"; then
+    create_environment
     create_cluster
 fi
 
-if "$run_memcached"; then
-    output "[process] clean up memcached..."
-    kubectl delete service some-memcached-11211
-    kubectl delete pod some-memcached
-    run_memcached
-fi 
+# should not be needed 
+#if "$run_memcached"; then
+#    output "[process] clean up memcached..."
+#    kubectl delete service some-memcached-11211
+#    kubectl delete pod some-memcached
+#    run_memcached
+#fi 
 
 if "$install_mcperf"; then
     install_mcperf
