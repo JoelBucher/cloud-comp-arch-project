@@ -95,8 +95,8 @@ install_mcperf () {
             compute_remote $machine "sudo apt install -y memcached libmemcached-tools"
 
             # change config
-            compute_remote $machine "sed -i '/^.*-m.*/c\-m 1024' ./etc/memcached.conf"
-            compute_remote $machine "sed -i '/^.*-l.*/c\-l $memcache_server_ip' ./etc/memcached.conf"
+            compute_remote $machine "sudo sed -i '/^.*-m.*/c\-m 1024' ./etc/memcached.conf"
+            compute_remote $machine "sudo sed -i '/^.*-l.*/c\-l $memcache_server_ip' ./etc/memcached.conf"
 
             compute_remote $machine "sudo systemctl restart memcached"
             compute_background_remote "sudo systemctl status memcached" $memcache_server_log_4_1
