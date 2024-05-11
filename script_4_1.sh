@@ -45,6 +45,10 @@ interactive_mode(){
     done
 }
 
+compute_background_remote () {
+    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $scheduling_policy/$3 &
+}
+
 compute_remote () {
     gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2"
 }
