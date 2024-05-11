@@ -1,8 +1,8 @@
 
 # Settings
 user=johanst
-create_cluster=true
-install_mcperf=false
+create_cluster=false
+install_mcperf=true
 interactive_mode=true
 
 # log_folder
@@ -114,8 +114,6 @@ install_mcperf () {
             compute_remote $machine "sudo apt-get build-dep memcached --yes"
             compute_remote $machine "git clone https://github.com/eth-easl/memcache-perf-dynamic.git"
             compute_remote $machine "cd memcache-perf-dynamic && make"
-            
-            compute_background_remote $machine "./mcperf -T 16 -A" $client_agent_log_4_1
         fi
 
         if [[ $nodetype == "client-measure" ]]; then
