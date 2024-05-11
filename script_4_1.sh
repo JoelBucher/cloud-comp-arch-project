@@ -1,9 +1,8 @@
 
 # Settings
 user=johanst
-create_cluster=false
-install_mcperf=true
-run_memcached=true
+create_cluster=true
+install_mcperf=false
 interactive_mode=true
 
 # log_folder
@@ -29,7 +28,6 @@ interactive_mode(){
     echo "user \t\t\t $user"
     echo "create cluster \t\t $( [ "$create_cluster" = "true" ] && echo "✅" || echo "❌" )"
     echo "install mcperf \t\t $( [ "$install_mcperf" = "true" ] && echo "✅" || echo "❌" )"
-    echo "run memcached \t\t $( [ "$run_memcached" = "true" ] && echo "✅" || echo "❌" )"
     echo ""
     echo ""
     echo "[Note]: Please make sure that you execute this command in your current active shell before you start the script"
@@ -100,7 +98,6 @@ install_mcperf () {
 
             compute_remote $machine "sudo systemctl restart memcached"
             compute_background_remote "sudo systemctl status memcached" $memcache_server_log_4_1
-
         fi
 
         if [[ $nodetype == "client-agent" ]]; then
@@ -135,15 +132,6 @@ install_mcperf () {
     done
 }
 
-# should not be needed 
-#run_memcached () {
-#    output "[process] creating memcached..."
-#    kubectl create -f memcache-t1-cpuset.yaml
-#    kubectl expose pod some-memcached --name some-memcached-11211  --type LoadBalancer --port 11211 --protocol TCP
-#   sleep 60
-#    kubectl get service some-memcached-11211
-#}
-
 if "$interactive_mode"; then
     interactive_mode
 fi
@@ -153,14 +141,6 @@ if "$create_cluster"; then
     create_environment
     create_cluster
 fi
-
-# should not be needed 
-#if "$run_memcached"; then
-#    output "[process] clean up memcached..."
-#    kubectl delete service some-memcached-11211
-#    kubectl delete pod some-memcached
-#    run_memcached
-#fi 
 
 if "$install_mcperf"; then
     install_mcperf
