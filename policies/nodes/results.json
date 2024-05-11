@@ -8,14 +8,14 @@
                 "annotations": {
                     "kubernetes.io/limit-ranger": "LimitRanger plugin set: cpu request for container memcached"
                 },
-                "creationTimestamp": "2024-05-03T10:30:23Z",
+                "creationTimestamp": "2024-05-05T15:32:14Z",
                 "labels": {
                     "name": "some-memcached"
                 },
                 "name": "some-memcached",
                 "namespace": "default",
-                "resourceVersion": "11870",
-                "uid": "9c665cf2-72a8-4362-b4dc-00f2c4a449cd"
+                "resourceVersion": "3912",
+                "uid": "e573b7a7-4e34-4045-8602-e6baa6ac2408"
             },
             "spec": {
                 "containers": [
@@ -40,7 +40,7 @@
                         "volumeMounts": [
                             {
                                 "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-                                "name": "kube-api-access-qzl8l",
+                                "name": "kube-api-access-dp2vw",
                                 "readOnly": true
                             }
                         ]
@@ -48,7 +48,7 @@
                 ],
                 "dnsPolicy": "ClusterFirst",
                 "enableServiceLinks": true,
-                "nodeName": "node-c-8core-lzr6",
+                "nodeName": "node-c-8core-fhrf",
                 "nodeSelector": {
                     "cca-project-nodetype": "node-c-8core"
                 },
@@ -76,7 +76,7 @@
                 ],
                 "volumes": [
                     {
-                        "name": "kube-api-access-qzl8l",
+                        "name": "kube-api-access-dp2vw",
                         "projected": {
                             "defaultMode": 420,
                             "sources": [
@@ -119,32 +119,32 @@
                 "conditions": [
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-05-03T10:30:23Z",
+                        "lastTransitionTime": "2024-05-05T15:32:14Z",
                         "status": "True",
                         "type": "Initialized"
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-05-03T10:30:27Z",
+                        "lastTransitionTime": "2024-05-05T15:32:17Z",
                         "status": "True",
                         "type": "Ready"
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-05-03T10:30:27Z",
+                        "lastTransitionTime": "2024-05-05T15:32:17Z",
                         "status": "True",
                         "type": "ContainersReady"
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-05-03T10:30:23Z",
+                        "lastTransitionTime": "2024-05-05T15:32:14Z",
                         "status": "True",
                         "type": "PodScheduled"
                     }
                 ],
                 "containerStatuses": [
                     {
-                        "containerID": "containerd://96754ad991f287c71ce7f009ba5d4e52f4ccda658359894735414051f35815bc",
+                        "containerID": "containerd://6b4fa2bec5ca58583a9b8befa775df7bd3f5b3dd179546d56d4cde162c9f492b",
                         "image": "docker.io/anakli/memcached:t1",
                         "imageID": "sha256:5366d8d9fe88b4f31f0f2a8e5b3a14db60afab3c6c5ee3d58be293c1fb232804",
                         "lastState": {},
@@ -154,21 +154,21 @@
                         "started": true,
                         "state": {
                             "running": {
-                                "startedAt": "2024-05-03T10:30:26Z"
+                                "startedAt": "2024-05-05T15:32:17Z"
                             }
                         }
                     }
                 ],
-                "hostIP": "10.0.16.3",
+                "hostIP": "10.0.16.5",
                 "phase": "Running",
-                "podIP": "100.96.2.13",
+                "podIP": "100.96.6.4",
                 "podIPs": [
                     {
-                        "ip": "100.96.2.13"
+                        "ip": "100.96.6.4"
                     }
                 ],
                 "qosClass": "Burstable",
-                "startTime": "2024-05-03T10:30:23Z"
+                "startTime": "2024-05-05T15:32:14Z"
             }
         }
     ],

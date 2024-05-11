@@ -21,6 +21,8 @@ for item in json_file['items']:
                     item['status']['containerStatuses'][0]['state']['terminated']['finishedAt'],
                     time_format)
             print("Job time: ", completion_time - start_time)
+            print(start_time)
+            print(completion_time)
             start_times.append(start_time)
             completion_times.append(completion_time)
         except KeyError:

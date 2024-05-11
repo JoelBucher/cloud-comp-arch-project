@@ -15,4 +15,4 @@ spec:
         args: ["-c", "./run -a run -S parsec -p vips -i native -n 4"]
       restartPolicy: Never
       nodeSelector:
-        cca-project-nodetype: "node-a-2core"
+        cca-project-nodetype: "node-b-4core"

@@ -15,4 +15,4 @@ spec:
         args: ["-c", "./run -a run -S splash2x -p radix -i native -n 4"]
       restartPolicy: Never
       nodeSelector:
-        cca-project-nodetype: "node-c-8core"
+        cca-project-nodetype: "node-b-4core"

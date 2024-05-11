@@ -1,13 +1,13 @@
 
 # Settings
-user=bucherjo
+user=kivanova
 create_cluster=false
 install_mcperf=true
 run_memcached=true
 interactive_mode=true
 
 # Scheduling Policy
-scheduling_policy="./policies/nodes"
+scheduling_policy="./policies/parallel_policy"
 
 # Files
 client_a_log="client_a.log"
@@ -28,9 +28,9 @@ interactive_mode(){
     echo ""
     echo "user \t\t\t $user"
     echo "scheduling policy \t $scheduling_policy"
-    echo "create cluster \t\t $( [ "$create_cluster" = "true" ] && echo "✅" || echo "❌" )"
-    echo "install mcperf \t\t $( [ "$install_mcperf" = "true" ] && echo "✅" || echo "❌" )"
-    echo "run memcached \t\t $( [ "$run_memcached" = "true" ] && echo "✅" || echo "❌" )"
+    echo "create cluster \t\t $( [ "$create_cluster" = "true" ] && echo ".��" || echo ".��" )"
+    echo "install mcperf \t\t $( [ "$install_mcperf" = "true" ] && echo ".��" || echo ".��" )"
+    echo "run memcached \t\t $( [ "$run_memcached" = "true" ] && echo ".��" || echo ".��" )"
     echo ""
     echo ""
     echo "[Note]: Please make sure that you execute this command in your current active shell before you start the script"
@@ -134,7 +134,7 @@ parsec_jobs () {
     kubectl delete jobs --all
 
     output "[process] invoking parsec scheduling policy..."
-    sh $scheduling_policy/policy.sh
+    bash $scheduling_policy/policy.sh
 }
 
 run_memcached () {
@@ -166,8 +166,10 @@ if "$install_mcperf"; then
     install_mcperf
 fi
 
+sleep 2
 parsec_jobs
 
+sleep 30
 output "[process] running tests..."
 kubectl get pods -o json > $scheduling_policy/$result_file
 python3 get_time.py $scheduling_policy/$result_file
