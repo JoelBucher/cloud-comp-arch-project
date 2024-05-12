@@ -46,7 +46,7 @@ interactive_mode(){
 }
 
 compute_background_remote () {
-    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $scheduling_policy/$3 
+    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $4_1_logs/$3 
 }
 
 compute_remote () {
@@ -83,7 +83,7 @@ create_cluster () {
 
 install_mcperf () {
     # install modified version of mcperf on client-agent-a and client-agent-b
-    output "[process] install mcperf..."
+    output "[process] install mcperf and running services..."
 
     for nodetype in "memcached" "client-agent" "client-measure"; do
         machine=$(kubectl get nodes -l cca-project-nodetype=$nodetype -o=jsonpath='{.items[*].metadata.name}')
@@ -115,6 +115,9 @@ install_mcperf () {
             compute_remote $machine "sudo apt-get build-dep memcached --yes"
             compute_remote $machine "git clone https://github.com/eth-easl/memcache-perf-dynamic.git"
             compute_remote $machine "cd memcache-perf-dynamic && make"
+
+            output "[process] starting client-agent..."
+            compute_background_remote $machine "./mcperf -T 16 -A" $client_agent_log_4_1
         fi
 
         if [[ $nodetype == "client-measure" ]]; then
@@ -125,6 +128,13 @@ install_mcperf () {
             compute_remote $machine "sudo apt-get build-dep memcached --yes"
             compute_remote $machine "git clone https://github.com/eth-easl/memcache-perf-dynamic.git"
             compute_remote $machine "cd memcache-perf-dynamic && make"
+
+            echo "internal ip of memcache server is $memcache_server_ip"
+            echo "internal ip of agent is $client_agent_ip"
+
+            output "[process] starting memcached measure..."
+            compute_remote $machine "./mcperf -s $memcache_server_ip --loadonly"
+            compute_background_remote $machine "./mcperf -s $memcache_server_ip -a $client_agent_ip --noload -T 16 -C 4 -D 4 -Q 1000 -c 4 -t 1800 --qps_interval 10 --qps_min 5000 --qps_max 100000" $client_measure_log_4_1
         fi
     done
 }
@@ -145,16 +155,9 @@ fi
 
 output "[success] all running"
 
-# things to do manually:
-# ssh command: gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@<MACHINE_NAME> --zone europe-west3-a
-
+# how to ssh: gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@<MACHINE_NAME> --zone europe-west3-a
 # set number of cores the server is allowed to use for memcached with "sudo taskset -a -cp 0-2 <pid>"
 # where pid is the id you get from the verification "sudo systemctl status memcached"
 # note, pid changes everytime you restart the service "sudo systemctl restart memcached"
-
-# running load on client agent
-#  ./mcperf -T 16 -A
-
-# starting measurment on client measure
-# ./mcperf -s $memcache_server_ip --loadonly
-# ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 1 -C 1 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000
+# you only need to reststart the service, when changing the confic file
+# this can have ovewer side effects, such as the agent or the measure-agent to fail, maybe
