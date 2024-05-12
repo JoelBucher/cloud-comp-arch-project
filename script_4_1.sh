@@ -99,7 +99,7 @@ install_mcperf () {
             # change config
             compute_remote $machine "sudo sed -i '/^.*-m.*/c\-m 1024' /etc/memcached.conf"
             compute_remote $machine "sudo sed -i '/^.*-l.*/c\-l $memcache_server_ip' /etc/memcached.conf"
-            compute_remote $machine "sudo sed -i '$ a\-t 2' /etc/memcached.conf"
+            # compute_remote $machine "sudo sed -i '$ a\-t 2' /etc/memcached.conf" # maybe only needed for 4.1???
 
             compute_remote $machine "sudo systemctl restart memcached"
             compute_background_remote $machine "sudo systemctl status memcached" $memcache_server_log_4_1
@@ -155,9 +155,18 @@ fi
 
 output "[success] all running"
 
+output "[success] starting controller 4_2_controller.py"
+# TODO python3 4_2_controller.py
+
 # how to ssh: gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@<MACHINE_NAME> --zone europe-west3-a
 # set number of cores the server is allowed to use for memcached with "sudo taskset -a -cp 0-2 <pid>"
 # where pid is the id you get from the verification "sudo systemctl status memcached"
 # note, pid changes everytime you restart the service "sudo systemctl restart memcached"
 # you only need to reststart the service, when changing the confic file
 # this can have ovewer side effects, such as the agent or the measure-agent to fail, maybe
+
+# in case you need to redo 4.1:
+# comment everything out after compute_remote $machine "cd memcache-perf-dynamic && make" in the client-agent and client-measure
+# then ssh into all 3 machines for each task
+# set the number of threads and and cores on the server with changing the config file and  with the "sudo taskset -a -cp 0-2 <pid>"
+# then restart server, start client-agent, start client-measure, repeat
