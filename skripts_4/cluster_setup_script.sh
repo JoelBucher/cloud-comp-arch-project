@@ -1,18 +1,17 @@
 
 # Settings
 user=johanst
-create_cluster=false
-install_mcperf=true
+create_cluster=true
+install_mcperf=false
 interactive_mode=true
 
 # log_folder
-4_1_logs="./4_1_logs"
+logs_4="./logs_4"
 
 # Files
-memcache_server_log_4_1="memcache_server_4_1.log"
-client_agent_log_4_1="client_agent_4_1.log"
-client_measure_log_4_1="client_measure_4_1.log"
-result_file_4_1="results_4_1.json"
+memcache_server_log_4="memcache_server_4_1.log"
+client_agent_log_4="client_agent_4_1.log"
+client_measure_log_4="client_measure_4_1.log"
 
 output () {
     RED='\033[0;31m'
@@ -46,7 +45,7 @@ interactive_mode(){
 }
 
 compute_background_remote () {
-    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $4_1_logs/$3 
+    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $logs_4/$3 
 }
 
 compute_remote () {
@@ -58,9 +57,9 @@ create_environment () {
     export KOPS_STATE_STORE=gs://cca-eth-2024-group-022-$user/
     PROJECT='gcloud config get-value project'
 
-    rm $4_1_logs/$memcache_server_log_4_1
-    rm $4_1_logs/$client_agent_log_4_1
-    rm $4_1_logs/$client_measure_log_4_1
+    rm $logs_4/$memcache_server_log_4
+    rm $logs_4/$client_agent_log_4
+    rm $logs_4/$client_measure_log_4
 }
 
 create_cluster () {
@@ -102,7 +101,7 @@ install_mcperf () {
             # compute_remote $machine "sudo sed -i '$ a\-t 2' /etc/memcached.conf" # maybe only needed for 4.1???
 
             compute_remote $machine "sudo systemctl restart memcached"
-            compute_background_remote $machine "sudo systemctl status memcached" $memcache_server_log_4_1
+            compute_background_remote $machine "sudo systemctl status memcached" $memcache_server_log_4
         fi
 
         if [[ $nodetype == "client-agent" ]]; then
@@ -116,8 +115,9 @@ install_mcperf () {
             compute_remote $machine "git clone https://github.com/eth-easl/memcache-perf-dynamic.git"
             compute_remote $machine "cd memcache-perf-dynamic && make"
 
-            output "[process] starting client-agent..."
-            compute_background_remote $machine "./mcperf -T 16 -A" $client_agent_log_4_1
+            # better start it manualy, as this part should run after some python scripts are done on the server
+            # output "[process] starting client-agent..." 
+            # compute_background_remote $machine "./mcperf -T 16 -A" $client_agent_log_4
         fi
 
         if [[ $nodetype == "client-measure" ]]; then
@@ -132,9 +132,10 @@ install_mcperf () {
             echo "internal ip of memcache server is $memcache_server_ip"
             echo "internal ip of agent is $client_agent_ip"
 
-            output "[process] starting memcached measure..."
-            compute_remote $machine "./mcperf -s $memcache_server_ip --loadonly"
-            compute_background_remote $machine "./mcperf -s $memcache_server_ip -a $client_agent_ip --noload -T 16 -C 4 -D 4 -Q 1000 -c 4 -t 1800 --qps_interval 10 --qps_min 5000 --qps_max 100000" $client_measure_log_4_1
+            # better start it manualy, as this part should run after some python scripts are done on the server
+            # output "[process] starting memcached measure..."
+            # compute_remote $machine "./mcperf -s $memcache_server_ip --loadonly"
+            # compute_background_remote $machine "./mcperf -s $memcache_server_ip -a $client_agent_ip --noload -T 16 -C 4 -D 4 -Q 1000 -c 4 -t 1800 --qps_interval 10 --qps_min 5000 --qps_max 100000" $client_measure_log_4
         fi
     done
 }
@@ -155,18 +156,9 @@ fi
 
 output "[success] all running"
 
-output "[success] starting controller 4_2_controller.py"
-# TODO python3 4_2_controller.py
-
 # how to ssh: gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@<MACHINE_NAME> --zone europe-west3-a
 # set number of cores the server is allowed to use for memcached with "sudo taskset -a -cp 0-2 <pid>"
 # where pid is the id you get from the verification "sudo systemctl status memcached"
 # note, pid changes everytime you restart the service "sudo systemctl restart memcached"
 # you only need to reststart the service, when changing the confic file
 # this can have ovewer side effects, such as the agent or the measure-agent to fail, maybe
-
-# in case you need to redo 4.1:
-# comment everything out after compute_remote $machine "cd memcache-perf-dynamic && make" in the client-agent and client-measure
-# then ssh into all 3 machines for each task
-# set the number of threads and and cores on the server with changing the config file and  with the "sudo taskset -a -cp 0-2 <pid>"
-# then restart server, start client-agent, start client-measure, repeat
