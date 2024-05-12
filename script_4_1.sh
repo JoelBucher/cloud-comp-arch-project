@@ -156,5 +156,5 @@ output "[success] all running"
 #  ./mcperf -T 16 -A
 
 # starting measurment on client measure
-# ./mcperf -s INTERNAL_MEMCACHED_IP --loadonly
+# ./mcperf -s $memcache_server_ip --loadonly
 # ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 1 -C 1 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000
