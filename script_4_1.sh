@@ -46,7 +46,7 @@ interactive_mode(){
 }
 
 compute_background_remote () {
-    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $scheduling_policy/$3 &
+    nohup gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$1 --zone europe-west3-a -- "$2" >> $scheduling_policy/$3 
 }
 
 compute_remote () {
@@ -85,23 +85,24 @@ install_mcperf () {
     # install modified version of mcperf on client-agent-a and client-agent-b
     output "[process] install mcperf..."
 
-    for nodetype in "memcache-server" "client-agent" "client-measure"; do
+    for nodetype in "memcached" "client-agent" "client-measure"; do
         machine=$(kubectl get nodes -l cca-project-nodetype=$nodetype -o=jsonpath='{.items[*].metadata.name}')
 
         output "[process] install mcperf on $machine ..."
 
-        if [[ $nodetype == "memcache-server" ]]; then
+        if [[ $nodetype == "memcached" ]]; then
             memcache_server_ip=$(kubectl get nodes $machine -o=jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
 
             compute_remote $machine "sudo apt update"
             compute_remote $machine "sudo apt install -y memcached libmemcached-tools"
 
             # change config
-            compute_remote $machine "sudo sed -i '/^.*-m.*/c\-m 1024' ./etc/memcached.conf"
-            compute_remote $machine "sudo sed -i '/^.*-l.*/c\-l $memcache_server_ip' ./etc/memcached.conf"
+            compute_remote $machine "sudo sed -i '/^.*-m.*/c\-m 1024' /etc/memcached.conf"
+            compute_remote $machine "sudo sed -i '/^.*-l.*/c\-l $memcache_server_ip' /etc/memcached.conf"
+            compute_remote $machine "sudo sed -i '$ a\-t 2' /etc/memcached.conf"
 
             compute_remote $machine "sudo systemctl restart memcached"
-            compute_background_remote "sudo systemctl status memcached" $memcache_server_log_4_1
+            compute_background_remote $machine "sudo systemctl status memcached" $memcache_server_log_4_1
         fi
 
         if [[ $nodetype == "client-agent" ]]; then
@@ -124,12 +125,6 @@ install_mcperf () {
             compute_remote $machine "sudo apt-get build-dep memcached --yes"
             compute_remote $machine "git clone https://github.com/eth-easl/memcache-perf-dynamic.git"
             compute_remote $machine "cd memcache-perf-dynamic && make"
-
-            echo "internal ip of memcache server is $memcache_server_ip"
-            echo "internal ip of agent is $client_agent_ip"
-
-            output "[process] loading memcached..."
-            compute_remote $machine "./mcperf -s $memcache_server_ip --loadonly"
         fi
     done
 }
@@ -150,5 +145,16 @@ fi
 
 output "[success] all running"
 
-# manually ssh into measure and mesure with
+# things to do manually:
+# ssh command: gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@<MACHINE_NAME> --zone europe-west3-a
+
+# set number of cores the server is allowed to use for memcached with "sudo taskset -a -cp 0-2 <pid>"
+# where pid is the id you get from the verification "sudo systemctl status memcached"
+# note, pid changes everytime you restart the service "sudo systemctl restart memcached"
+
+# running load on client agent
+#  ./mcperf -T 16 -A
+
+# starting measurment on client measure
+# ./mcperf -s INTERNAL_MEMCACHED_IP --loadonly
 # ./mcperf -s $memcache_server_ip -a $client_agent_ip  --noload -T 1 -C 1 -D 4 -Q 1000 -c 4 -t 5 --scan 5000:125000:5000
