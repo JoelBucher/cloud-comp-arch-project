@@ -1,8 +1,8 @@
 
 # Settings
-user=johanst
+user=bucherjo
 create_cluster=true
-install_mcperf=false
+install_mcperf=true
 interactive_mode=true
 
 # log_folder
@@ -13,6 +13,11 @@ memcache_server_log_4="memcache_server_4_1.log"
 client_agent_log_4="client_agent_4_1.log"
 client_measure_log_4="client_measure_4_1.log"
 
+# Bash Scripts
+SCRIPT_1="1_client_agent.sh"
+SCRIPT_2="2_client_measure.sh"
+SCRIPT_3="3_scheduler.sh"
+
 output () {
     RED='\033[0;31m'
     NC='\033[0m' # No Color
@@ -21,7 +26,7 @@ output () {
 
 interactive_mode(){
     echo "* -------------------------------------- *"
-    echo "|           Awesome CCA Script           |"
+    echo "|            4.3 Setup Script            |"
     echo "* -------------------------------------- *"
     echo ""
     echo "user \t\t\t $user"
@@ -98,10 +103,12 @@ install_mcperf () {
             # change config
             compute_remote $machine "sudo sed -i '/^.*-m.*/c\-m 1024' /etc/memcached.conf"
             compute_remote $machine "sudo sed -i '/^.*-l.*/c\-l $memcache_server_ip' /etc/memcached.conf"
-            # compute_remote $machine "sudo sed -i '$ a\-t 2' /etc/memcached.conf" # maybe only needed for 4.1???
+            compute_remote $machine "sudo sed -i '$ a\-t 2' /etc/memcached.conf" # maybe only needed for 4.1???
 
             compute_remote $machine "sudo systemctl restart memcached"
             compute_background_remote $machine "sudo systemctl status memcached" $memcache_server_log_4
+
+            echo "gcloud compute scp ./skripts_4/preloader.py ubuntu@$machine:. --ssh-key-file ~/.ssh/cloud-computing --zone europe-west3-a" >> SCRIPT_3
         fi
 
         if [[ $nodetype == "client-agent" ]]; then
@@ -116,8 +123,8 @@ install_mcperf () {
             compute_remote $machine "cd memcache-perf-dynamic && make"
 
             # better start it manualy, as this part should run after some python scripts are done on the server
-            # output "[process] starting client-agent..." 
-            # compute_background_remote $machine "./mcperf -T 16 -A" $client_agent_log_4
+            echo 'echo "[process] starting client-agent..."' >> SCRIPT_2
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a -- \"./mcperf -T 16 -A\"" >> SCRIPT_2
         fi
 
         if [[ $nodetype == "client-measure" ]]; then
@@ -132,10 +139,10 @@ install_mcperf () {
             echo "internal ip of memcache server is $memcache_server_ip"
             echo "internal ip of agent is $client_agent_ip"
 
-            # better start it manualy, as this part should run after some python scripts are done on the server
-            # output "[process] starting memcached measure..."
-            # compute_remote $machine "./mcperf -s $memcache_server_ip --loadonly"
-            # compute_background_remote $machine "./mcperf -s $memcache_server_ip -a $client_agent_ip --noload -T 16 -C 4 -D 4 -Q 1000 -c 4 -t 1800 --qps_interval 10 --qps_min 5000 --qps_max 100000" $client_measure_log_4
+            output "generating script 3"
+            echo "echo \"[process] starting memcached measure...\"" >> SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a -- \"./mcperf -s $memcache_server_ip --loadonly\"" >> SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a -- \"./mcperf -s $memcache_server_ip -a $client_agent_ip --noload -T 16 -C 4 -D 4 -Q 1000 -c 4 -t 1800 --qps_interval 10 --qps_min 5000 --qps_max 100000\"" >> SCRIPT_3
         fi
     done
 }
