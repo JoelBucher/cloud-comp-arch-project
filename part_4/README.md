@@ -17,7 +17,7 @@ should be set to ``true``. If this is the case you can execute the setup script
 sh 0_setup.sh
 ```
 
-## Execute Client Agent
+## Execute Client Agent
 Open a new terminal and execute
 ```
 sh 1_client_agent.sh
