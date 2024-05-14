@@ -122,6 +122,21 @@ install_mcperf () {
             compute_background_remote $machine "sudo systemctl status memcached" $memcache_server_log_4
 
             output "[process] writing to script_3"
+            echo "pid=\$(gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"pgrep memcached\")" >> $SCRIPT_3
+            echo "echo \"memcached pid is: \$pid\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo taskset -a -cp 0-2 \$pid\"" >> $SCRIPT_3
+
+            echo "echo \"memcached pid is: \$pid\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo apt-get install python3-pip --yes\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo pip3 install docker\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo pip3 install psutil\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo apt install docker.io\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"grep docker /etc/group\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo usermod -aG docker ubuntu\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"newgrp docker\"" >> $SCRIPT_3
+
+
+
             echo "gcloud compute scp ./preloader.py ubuntu@$machine:. --ssh-key-file ~/.ssh/cloud-computing --zone europe-west3-a" >> $SCRIPT_3
             echo "gcloud compute scp ./scheduler.py ubuntu@$machine:. --ssh-key-file ~/.ssh/cloud-computing --zone europe-west3-a" >> $SCRIPT_3
             echo "gcloud compute scp ./$SCRIPT_3_REMOTE ubuntu@$machine:. --ssh-key-file ~/.ssh/cloud-computing --zone europe-west3-a" >> $SCRIPT_3

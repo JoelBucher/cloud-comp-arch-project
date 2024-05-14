@@ -1,6 +1,4 @@
-# TODO be able to run a container job
-# TODO Measure CPU Usage
-# TODO shedule policy based on CPU Usage
+import psutil
 import scheduler_logger 
 from enum import Enum
 import docker
@@ -9,6 +7,10 @@ logger = scheduler_logger.SchedulerLogger
 jobs = scheduler_logger.Job
 
 client = docker.from_env()
+
+# returns an array of cpu usage in percent, where the index i is the core i
+def get_cpu_usage():
+    return psutil.cpu_percent(interval=1, percpu=True)
 
 job_settings = {
     jobs.BLACKSCHOLES: {"image": "anakli/cca:parsec_blackscholes", "threads": 1},
@@ -29,6 +31,7 @@ def main():
         container = client.containers.run(j["image"], f"./run -a run -S parsec -p {j.value} -i native -n {num_threads}", cpuset_cpus=",".join(map(str, [0])), detach=True)
     print("work in progress")
     
+    print(get_cpu_usage())
 
 if __name__ == "__main__":
     main()
