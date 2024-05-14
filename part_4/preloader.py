@@ -25,12 +25,10 @@ job_settings = {
 def preload_container(job):
     settings = job_settings[job]
     image = settings["image"]
-    num_threads = settings["threads"]
 
     try:
         print("pulling image: " + image)
-        container = client.containers.run(image, f"./run -a run -S parsec -p {job.value} -i native -n {num_threads}", cpuset_cpus=",".join(map(str, [0])), detach=True)
-        container.stop()
+        client.images.pull(image)
         print("finished pulling image: " + image)
     except docker.errors.APIError as e:
         print(f"Error running container for {job.value}: {e}")
