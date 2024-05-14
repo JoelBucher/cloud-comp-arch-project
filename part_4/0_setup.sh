@@ -128,6 +128,7 @@ install_mcperf () {
             echo "echo \"memcached pid is: \$pid\"" >> $SCRIPT_3
             echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo apt-get install python3-pip --yes\"" >> $SCRIPT_3
             echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo pip3 install docker\"" >> $SCRIPT_3
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo pip3 install psutil\"" >> $SCRIPT_3
             echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo apt install docker.io\"" >> $SCRIPT_3
             echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"grep docker /etc/group\"" >> $SCRIPT_3
             echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"sudo usermod -aG docker ubuntu\"" >> $SCRIPT_3

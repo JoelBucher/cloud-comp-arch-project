@@ -1,10 +1,11 @@
-# TODO be able to run a container job
-# TODO Measure CPU Usage
-# TODO shedule policy based on CPU Usage
+import psutil
 
+# returns an array of cpu usage in percent, where the index i is the core i
+def get_cpu_usage():
+    return psutil.cpu_percent(interval=1, percpu=True)
 
 def main():
-    print("work in progress")
+    print(get_cpu_usage())
 
 if __name__ == "__main__":
     main()
