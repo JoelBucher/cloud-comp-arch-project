@@ -1,6 +1,6 @@
 
 # Settings
-user=bucherjo
+user=johanst
 create_cluster=true
 install_mcperf=true
 interactive_mode=true
@@ -133,7 +133,7 @@ install_mcperf () {
             output "[process] writing to script_3_remote"
             echo "pid=\$(pgrep memcached)" >> $SCRIPT_3_REMOTE
             echo "echo \"memcached pid is: \$pid\"" >> $SCRIPT_3_REMOTE
-            echo "sudo taskset -a -cp 0-1 \$pid" >> $SCRIPT_3_REMOTE
+            echo "sudo taskset -a -cp 0 \$pid" >> $SCRIPT_3_REMOTE
 
             echo "sudo apt-get install python3-pip --yes" >> $SCRIPT_3_REMOTE
             echo "sudo pip3 install docker" >> $SCRIPT_3_REMOTE
@@ -143,7 +143,7 @@ install_mcperf () {
             #echo "sudo usermod -aG docker ubuntu" >> $SCRIPT_3_REMOTE
             echo "sudo newgrp docker" >> $SCRIPT_3_REMOTE
             echo "python3 preloader.py" >> $SCRIPT_3_REMOTE
-            echo "python3 scheduler.py" >> $SCRIPT_3_REMOTE
+            echo "python3 scheduler.py \$pid" >> $SCRIPT_3_REMOTE
 
         fi
 

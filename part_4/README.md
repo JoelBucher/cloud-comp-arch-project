@@ -40,5 +40,5 @@ sh 4_scheduler_remote.sh
 on the remote VM that has been opened by the former script. If the remote script should be unresponsive or not execute any python files, please perform the following steps:
 ```
 python3 preloader.py
-python3 scheduler.py
+python3 scheduler.py <pid_of_memcached>
 ```

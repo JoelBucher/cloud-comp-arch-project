@@ -1,6 +1,9 @@
 import psutil
-import scheduler_logger 
+import scheduler_logger
 import docker
+import time
+import sys
+import os
 
 client = docker.from_env()
 Job = scheduler_logger.Job
@@ -19,11 +22,47 @@ configs = {
     Job.RADIX: {"image": "anakli/cca:splash2x_radix", "threads": 2}
 }
 
+def check_SLO(pid_of_memcached, logger, memecached_on_cpu1):
+    current_cpu_usage = get_cpu_usage()
+
+    if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 55):
+        # if needed, stop job at cpu 1
+        # todo
+
+        # shedule memechached on cpu 1 as well
+        os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
+        logger.update_cores(Job.MEMCACHED, [0, 1])
+
+        memecached_on_cpu1 = True
+        time.sleep(3) 
+
+    elif (memecached_on_cpu1) and (current_cpu_usage[1] <= 30):
+        # shedule memechached on cpu 0 only
+        os.system(f"sudo taskset -a -cp 0 {pid_of_memcached}")
+        logger.update_cores(Job.MEMCACHED, [0])
+        
+        # resume jop that is still on cpu 1
+        # todo
+
+        memecached_on_cpu1 = False
+
+    return memecached_on_cpu1
+
+
 def main():
     logger = scheduler_logger.SchedulerLogger()
 
+    if len(sys.argv) != 2:
+        print("Usage: python3 scheduler.py to many arguments")
+        return
+    
+    # need the pid of memcached to schedule it on different cores
+    pid_of_memcached = sys.argv[1]
+    memecached_on_cpu1 = False # python does not know global variables...
+
+    '''
     for j in Job:
-        # We dont want to execute the scheduler task
+        # We dont want to execute the scheduler task nor memcached
         if j == Job.SCHEDULER or j== Job.MEMCACHED:
             continue
 
@@ -52,7 +91,13 @@ def main():
 
         logger.job_end(j)
         print(container.logs())
-        
+        '''
+    
+    while True:
+        memecached_on_cpu1 = check_SLO(pid_of_memcached, logger, memecached_on_cpu1)
+        print(get_cpu_usage())
+
+    logger.end()
 
 if __name__ == "__main__":
     main()
