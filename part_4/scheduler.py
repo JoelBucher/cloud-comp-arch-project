@@ -108,7 +108,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, core_1):
             core_1.resume_task(logger)
             
         memecached_on_cpu1 = False
-        time.sleep(1) 
+        time.sleep(1) # code will crash without this
 
     return memecached_on_cpu1
 
