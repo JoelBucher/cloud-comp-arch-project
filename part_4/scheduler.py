@@ -43,11 +43,11 @@ class CPU_Core:
     
     def stop_task(self, logger):
         logger.job_pause(self.job)
-        self.container.stop()
+        self.container.pause()
 
     def resume_task(self, logger):
         logger.job_unpause(self.job)
-        self.container.start()
+        self.container.unpause()
 
     def check_container(self, logger):
         self.container.reload()
