@@ -24,7 +24,7 @@ class CPU_Core:
         self.container = None
         self.job = None
 
-    def get_task(self, job, core_list, logger):
+    def start_job(self, job, core_list, logger):
         self.job = job
         settings = configs[job]
         image = settings["image"]
@@ -50,6 +50,12 @@ class CPU_Core:
                 remove= False,
                 name= job.value
             )
+
+    # new_core_Set has to be a string "0-3" or "2"
+    # new_core_list is a list of the cores, lke [2, 3] or [0]
+    def update_cores(self, logger, new_core_list, new_core_Set):
+        logger.update_cores(self.job, new_core_list)
+        self.container.update(cpuset_cpus=new_core_Set)
     
     def stop_task(self, logger):
         logger.job_pause(self.job)
@@ -123,17 +129,30 @@ def main():
     for i in range(4):
         cores.append(CPU_Core(i))
 
-    job_1 = [Job.RADIX, Job.VIPS, Job.DEDUP] 
+    job_1 = [Job.RADIX, Job.VIPS, Job.DEDUP, Job.BLACKSCHOLES] 
+    job_2 = [Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
 
-    while number_of_finished_jobs < 3:
-        # check, if something is running on core 1, if not, schedule job
+    while number_of_finished_jobs < 7:
+        # check, if something is running on core 1, if not, schedule job on core 1, if memechached is not running there
         if (cores[1].job == None) and (not memecached_on_cpu1):
             temp_j = job_1.pop()
             print(temp_j)
-            cores[1].get_task(temp_j, [1], logger)
+            cores[1].start_job(temp_j, [1], logger)
 
-        # check, if job is finished on core 1
+        # check, if something is running on core 2, if not, schedule job on core 2 and 3
+        if cores[2].job == None :
+            temp_j = job_2.pop()
+            print(temp_j)
+            cores[2].start_job(temp_j, [2, 3], logger)
+
+        # needs now smarter scheduling
+        # we can also change cores of jobs, see function in CPU_Core
+        # right now, we only schedule some jobs on core 1 or on cores (2 and 3) toghether
+        # we never check, if core 2 and 3 are empty, to schedule the jobs on core 1 to either other core
+
+        # check, if job is finished on core 1 or 2
         number_of_finished_jobs = number_of_finished_jobs + cores[1].check_container(logger)
+        number_of_finished_jobs = number_of_finished_jobs + cores[2].check_container(logger)
 
         # check SLO
         memecached_on_cpu1 = check_SLO(pid_of_memcached, logger, memecached_on_cpu1,  cores[1])
