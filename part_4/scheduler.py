@@ -51,7 +51,7 @@ class CPU_Core:
 
     def check_container(self, logger):
         self.container.reload()
-        if(self.container.status != "exited"):
+        if(self.container.status == "exited"):
             logger.job_end(self.job)
             self.container.remove()
             self.container = None
