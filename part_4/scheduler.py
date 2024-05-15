@@ -32,14 +32,24 @@ class CPU_Core:
         cores = settings["cpuset_cpus"]
 
         logger.job_start(job, core_list, threads)
-        self.container = client.containers.run(
-            image= image,
-            command= ["./run", "-a", "run", "-S", "parsec", "-p", job.value, "-i", "native", "-n", str(threads)],
-            cpuset_cpus= cores,
-            detach= True,
-            remove= False,
-            name= job.value
-        )
+        if job.value == "radix":
+                self.container = client.containers.run(
+                image= image,
+                command= ["./run", "-a", "run", "-S", "splash2x", "-p", job.value, "-i", "native", "-n", str(threads)],
+                cpuset_cpus= cores,
+                detach= True,
+                remove= False,
+                name= job.value
+            )
+        else:
+            self.container = client.containers.run(
+                image= image,
+                command= ["./run", "-a", "run", "-S", "parsec", "-p", job.value, "-i", "native", "-n", str(threads)],
+                cpuset_cpus= cores,
+                detach= True,
+                remove= False,
+                name= job.value
+            )
     
     def stop_task(self, logger):
         logger.job_pause(self.job)
@@ -53,6 +63,7 @@ class CPU_Core:
         self.container.reload()
         if(self.container.status == "exited"):
             logger.job_end(self.job)
+            logger.custom_event(self.job, "container exit status: " + str(self.container.wait()['StatusCode']))
             self.container.remove()
             self.container = None
             self.job = None
@@ -69,14 +80,14 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, core_1):
     current_cpu_usage = get_cpu_usage()
 
     if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 55):
-        # if needed, stop job at cpu 1
-        if core_1.job != None:
-            core_1.stop_task(logger)
-        
         # shedule memechached on cpu 1 as well
         os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
         logger.update_cores(Job.MEMCACHED, [0, 1])
 
+        # if needed, stop job at cpu 1
+        if core_1.job != None:
+            core_1.stop_task(logger)
+        
         memecached_on_cpu1 = True
         time.sleep(3) # don't want to reduce the cores back to fast, but want them fast, if load is low
 
@@ -104,6 +115,7 @@ def main():
     logger = scheduler_logger.SchedulerLogger()
     pid_of_memcached = sys.argv[1]
     memecached_on_cpu1 = False 
+    os.system(f"sudo taskset -a -cp 0 {pid_of_memcached}")
     logger.job_start(Job.MEMCACHED, [0], 2)
 
     number_of_finished_jobs = 0
@@ -115,7 +127,7 @@ def main():
 
     while number_of_finished_jobs < 3:
         # check, if something is running on core 1, if not, schedule job
-        if cores[1].job == None :
+        if (cores[1].job == None) and (not memecached_on_cpu1):
             temp_j = job_1.pop()
             print(temp_j)
             cores[1].get_task(temp_j, [1], logger)
@@ -128,39 +140,6 @@ def main():
         
     logger.end()
     print("done")
-
-    '''
-    for j in Job:
-        # We dont want to execute the scheduler task nor memcached
-        if j == Job.SCHEDULER or j== Job.MEMCACHED:
-            continue
-
-        settings = configs[j]
-        image = settings["image"]
-        threads = settings["threads"]
-
-        logger.job_start(j,[],0)
-        print(j)
-        print(j.value)
-        container = client.containers.run(
-            image= image,
-            command= ["./run", "-a", "run", "-S", "parsec", "-p", j.value, "-i", "native", "-n", str(threads)],
-            cpuset_cpus= '2',
-            detach= True,
-            remove= False,
-            name= j.value
-        )
-        
-        container.wait()
-
-        # while True:
-        #     if(container.status != "running"):
-        #         break
-        #     container.reload()
-
-        logger.job_end(j)
-        print(container.logs())
-        '''
 
 if __name__ == "__main__":
     main()
