@@ -9,8 +9,8 @@ client = docker.from_env()
 Job = scheduler_logger.Job
 
 configs = {
-    Job.BLACKSCHOLES: {"image": "anakli/cca:parsec_blackscholes", "threads": 1, "cpuset_cpus": '2-3'},
-    Job.CANNEAL: {"image": "anakli/cca:parsec_canneal", "threads": 4, "cpuset_cpus": '3'},
+    Job.BLACKSCHOLES: {"image": "anakli/cca:parsec_blackscholes", "threads": 1, "cpuset_cpus": '1'},
+    Job.CANNEAL: {"image": "anakli/cca:parsec_canneal", "threads": 4, "cpuset_cpus": '2-3'},
     Job.DEDUP: {"image": "anakli/cca:parsec_dedup", "threads": 4, "cpuset_cpus": '1'},
     Job.FERRET: {"image": "anakli/cca:parsec_ferret", "threads": 8, "cpuset_cpus": '2-3'},
     Job.FREQMINE: {"image": "anakli/cca:parsec_freqmine", "threads": 8, "cpuset_cpus": '2-3'},
@@ -134,13 +134,13 @@ def main():
 
     while number_of_finished_jobs < 7:
         # check, if something is running on core 1, if not, schedule job on core 1, if memechached is not running there
-        if (cores[1].job == None) and (not memecached_on_cpu1):
+        if (cores[1].job == None) and job_1 and (not memecached_on_cpu1):
             temp_j = job_1.pop()
             print(temp_j)
             cores[1].start_job(temp_j, [1], logger)
 
         # check, if something is running on core 2, if not, schedule job on core 2 and 3
-        if cores[2].job == None :
+        if cores[2].job == None and job_2:
             temp_j = job_2.pop()
             print(temp_j)
             cores[2].start_job(temp_j, [2, 3], logger)
@@ -149,10 +149,13 @@ def main():
         # we can also change cores of jobs, see function in CPU_Core
         # right now, we only schedule some jobs on core 1 or on cores (2 and 3) toghether
         # we never check, if core 2 and 3 are empty, to schedule the jobs on core 1 to either other core
+        # the cores are currently hardcoded in the configuration list, see at the very top on the code
 
         # check, if job is finished on core 1 or 2
-        number_of_finished_jobs = number_of_finished_jobs + cores[1].check_container(logger)
-        number_of_finished_jobs = number_of_finished_jobs + cores[2].check_container(logger)
+        if cores[1].job != None:
+            number_of_finished_jobs = number_of_finished_jobs + cores[1].check_container(logger)
+        if cores[2].job != None:    
+            number_of_finished_jobs = number_of_finished_jobs + cores[2].check_container(logger)
 
         # check SLO
         memecached_on_cpu1 = check_SLO(pid_of_memcached, logger, memecached_on_cpu1,  cores[1])
