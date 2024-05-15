@@ -40,10 +40,18 @@ class CPU_Core:
             remove= False,
             name= job.value
         )
-        
+    
+    def stop_task(self, logger):
+        logger.job_pause(self.job)
+        client.containers.get(self.container.id).stop()
+
+    def resume_task(self, logger):
+        logger.job_unpause(self.job)
+        client.containers.get(self.container.id).start()
+
     def check_container(self, logger):
         self.container.reload()
-        if(self.container.status != "running"):
+        if(self.container.status != "exited"):
             logger.job_end(self.job)
             self.container = None
             self.job = None
@@ -62,8 +70,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, core_1):
     if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 55):
         # if needed, stop job at cpu 1
         if core_1.job != None:
-            logger.job_pause(core_1.job)
-            client.containers.get(core_1.container.id).stop()
+            core_1.stop_task(logger)
         
         # shedule memechached on cpu 1 as well
         os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
@@ -79,8 +86,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, core_1):
         
         # resume jop that is still on cpu 1 
         if core_1.job != None:
-            logger.job_unpause(core_1.job)
-            client.containers.get(core_1.container.id).start()
+            core_1.resume_task(logger)
             
         memecached_on_cpu1 = False
 
@@ -106,24 +112,18 @@ def main():
 
     job_1 = [Job.RADIX, Job.VIPS, Job.DEDUP] 
 
-    counter = 0
-
     while number_of_finished_jobs < 3:
         # check, if something is running on core 1, if not, schedule job
         if cores[1].job == None :
             temp_j = job_1.pop()
             print(temp_j)
-            cores[1].get_task(temp_j, [0], logger)
+            cores[1].get_task(temp_j, [1], logger)
 
-        # check, if job is finished
+        # check, if job is finished on core 1
         number_of_finished_jobs = number_of_finished_jobs + cores[1].check_container(logger)
 
         # check SLO
         memecached_on_cpu1 = check_SLO(pid_of_memcached, logger, memecached_on_cpu1,  cores[1])
-
-        counter += 1
-        if counter % 10 == 0:
-            print(number_of_finished_jobs)
         
     logger.end()
     print("done")
