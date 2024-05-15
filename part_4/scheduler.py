@@ -58,8 +58,9 @@ class CPU_Core:
         self.container.update(cpuset_cpus=new_core_Set)
     
     def stop_task(self, logger):
-        logger.job_pause(self.job)
-        self.container.pause()
+        if self.container != None and self.container.status == "running":
+            logger.job_pause(self.job)
+            self.container.pause()
 
     def resume_task(self, logger):
         logger.job_unpause(self.job)
@@ -95,7 +96,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, core_1):
             core_1.stop_task(logger)
         
         memecached_on_cpu1 = True
-        time.sleep(3) # don't want to reduce the cores back to fast, but want them fast, if load is low
+        time.sleep(3) 
 
     elif (memecached_on_cpu1) and (current_cpu_usage[1] <= 30):
         # shedule memechached on cpu 0 only
@@ -107,6 +108,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, core_1):
             core_1.resume_task(logger)
             
         memecached_on_cpu1 = False
+        time.sleep(1) 
 
     return memecached_on_cpu1
 
