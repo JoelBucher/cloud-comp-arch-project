@@ -43,16 +43,17 @@ class CPU_Core:
     
     def stop_task(self, logger):
         logger.job_pause(self.job)
-        client.containers.get(self.container.id).stop()
+        self.container.stop()
 
     def resume_task(self, logger):
         logger.job_unpause(self.job)
-        client.containers.get(self.container.id).start()
+        self.container.start()
 
     def check_container(self, logger):
         self.container.reload()
         if(self.container.status != "exited"):
             logger.job_end(self.job)
+            self.container.remove()
             self.container = None
             self.job = None
             return 1
