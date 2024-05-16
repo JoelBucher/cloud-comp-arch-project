@@ -1,6 +1,6 @@
 
 # Settings
-user=johanst
+user=bucherjo
 create_cluster=true
 install_mcperf=true
 interactive_mode=true
@@ -138,6 +138,7 @@ install_mcperf () {
             echo "sudo apt-get install python3-pip --yes" >> $SCRIPT_3_REMOTE
             echo "sudo pip3 install docker" >> $SCRIPT_3_REMOTE
             echo "sudo pip3 install psutil" >> $SCRIPT_3_REMOTE
+            echo "sudo pip3 install pgrep" >> $SCRIPT_3_REMOTE
             echo "sudo apt install docker.io" >> $SCRIPT_3_REMOTE
             #echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a --command \"grep docker /etc/group\"" >> $SCRIPT_3
             #echo "sudo usermod -aG docker ubuntu" >> $SCRIPT_3_REMOTE

@@ -4,6 +4,7 @@ import docker
 import time
 import sys
 import os
+import pgrep
 
 client = docker.from_env()
 Job = scheduler_logger.Job
@@ -18,32 +19,28 @@ configs = {
     Job.RADIX:          {"threads": 2, "priority": [1],     "image": "anakli/cca:splash2x_radix"}
 }
 
-# transforms list of cpus [x,y,z] to cpuset of the form "x-z"
-def to_cpuset(cpus):
-    cpus.sort()
-    return str(cpus[0]) + "-" + str(cpus[-1])
-
 def get_job(jobs, core):
-    priority_jobs = jobs.filter(lambda j: core in configs[j]["priority"])
+    priority_jobs = list(filter(lambda j: core in configs[j]["priority"], jobs))
 
     if(len(priority_jobs) > 0):
-        priority_job = priority_jobs[0] 
+        return priority_jobs[0] 
     else:
-        priority_job = jobs[0]
-
-    jobs.remove(priority_job)
-    return jobs, priority_job
+        return jobs[0]
 
 
 class RunningJob:
-    def __init__(self,logger,job):
+    def __init__(self,logger,job,core):
         self.container = None
         self.job = job
         self.name = job.value
         self.logger = logger
-        self.cores = configs[job]["cores"]
+        self.cores = str(core)
         self.image = configs[job]["image"]
         self.threads = configs[job]["threads"]
+    
+    def toString(self):
+        self.container.reload()
+        return "[%s] %s (%s)" % (self.container.status, self.name, self.cores)
 
     def start(self):
         self.logger.job_start(self.job, self.cores, self.threads)
@@ -51,7 +48,7 @@ class RunningJob:
                 self.container = client.containers.run(
                 image= self.image,
                 command= ["./run", "-a", "run", "-S", "splash2x", "-p", self.name, "-i", "native", "-n", str(self.threads)],
-                cpuset_cpus= to_cpuset(self.cores),
+                cpuset_cpus= self.cores,
                 detach= True,
                 remove= False,
                 name= self.job.value
@@ -60,19 +57,19 @@ class RunningJob:
             self.container = client.containers.run(
                 image= self.image,
                 command= ["./run", "-a", "run", "-S", "parsec", "-p", self.name, "-i", "native", "-n", str(self.threads)],
-                cpuset_cpus= to_cpuset(self.cores),
+                cpuset_cpus= self.cores,
                 detach= True,
                 remove= False,
                 name= self.name
             )
 
     # new_core_Set has to be a string "0-3" or "2"
-    # new_core_list is a list of the cores, lke [2, 3] or [0]
     def update_cores(self, new_cores):
-        self.logger.update_cores(self.job, new_cores)
-        self.container.update(cpuset_cpus=to_cpuset(new_cores))
+        self.logger.update_cores(self.job,new_cores)
+        self.cpuset_cpus = new_cores 
+        self.container.update(cpuset_cpus=new_cores)
     
-    def stop(self):
+    def pause(self):
         if self.container != None and self.container.status == "running":
             self.logger.job_pause(self.job)
             self.container.pause()
@@ -101,10 +98,10 @@ def get_cpu_usage():
 def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
     current_cpu_usage = get_cpu_usage()
 
-    if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 55):
+    if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 70):
         # shedule memechached on cpu 1 as well
         os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
-        logger.update_cores(Job.MEMCACHED, [0, 1])
+        logger.update_cores(Job.MEMCACHED, "0-1")
 
         # if needed, stop job at cpu 1
         for j in concurrent_jobs:
@@ -113,10 +110,10 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         memecached_on_cpu1 = True
         time.sleep(3) 
 
-    elif (memecached_on_cpu1) and (current_cpu_usage[1] <= 30):
+    elif (memecached_on_cpu1) and (current_cpu_usage[1] <= 50):
         # shedule memechached on cpu 0 only
         os.system(f"sudo taskset -a -cp 0 {pid_of_memcached}")
-        logger.update_cores(Job.MEMCACHED, [0])
+        logger.update_cores(Job.MEMCACHED, "0")
         
         # resume jop that is still on cpu 1 
         for j in concurrent_jobs:
@@ -129,67 +126,115 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python3 scheduler.py to many arguments")
-        return
-    
     # need the pid of memcached to schedule it on different cores
     # python does not know global variables, hence, here they are
     logger = scheduler_logger.SchedulerLogger()
-    pid_of_memcached = sys.argv[1]
+
+    pid_of_memcached = pgrep.pgrep("memcached")[0]
+    print("memcached pid: ", pid_of_memcached)
+
     memecached_on_cpu1 = False 
     os.system(f"sudo taskset -a -cp 0 {pid_of_memcached}")
     logger.job_start(Job.MEMCACHED, [0], 2)
 
+    running = []
     running_0 = [] # core is fully reserved for memcached
     running_1 = [] # core where memcached has priority
     running_2 = [] # jobs core
     running_3 = [] # jobs core
 
-    jobs = [Job.RADIX, Job.VIPS, Job.DEDUP, Job.BLACKSCHOLES] 
-    jobs_23 = [Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
+    jobs = [Job.RADIX, Job.VIPS, Job.DEDUP, Job.BLACKSCHOLES, Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
 
-    while len(running + jobs_1 + jobs_23) > 0:
+    while len(running + jobs) > 0:
         cpu_usage = get_cpu_usage()
         core_0 = cpu_usage[0] # core is fully reserved for memcached
         core_1 = cpu_usage[1] # core where memcached has priority
         core_2 = cpu_usage[2] # jobs core
         core_3 = cpu_usage[3] # jobs core
 
-        if(core_1 and (not memecached_on_cpu1)):
-            new_job = RunningJob(logger, jobs_1.pop())
+        print("------")
+        print("cpu: " + str(cpu_usage))
+        
+        if(core_1 and (not memecached_on_cpu1) and (len(jobs) > 0) and core_1 < 50):
+            priority = get_job(jobs,1)
+            new_job = RunningJob(logger, priority, 1)
             new_job.start()
-            core_1.push(core_1)
+
+            running_1.append(new_job)
+            jobs.remove(priority)
+
+        if(core_2 < 50 and (len(jobs) > 0)):
+            priority = get_job(jobs,2)
+            new_job = RunningJob(logger, priority, 2)
+            new_job.start()
+
+            running_2.append(new_job)
+            jobs.remove(priority)
             
-        if(core_2 < 50 or core_3 < 50):
-            if(len(jobs_23) > 0):
-                print("issuing job23 on core 2/3")
-                new_job = RunningJob(logger, jobs_23.pop())
-                new_job.start()
-                core_1.push(core_1)
+        if(core_3 < 50 and (len(jobs) > 0)):
+            priority = get_job(jobs,3)
+            new_job = RunningJob(logger, priority, 3)
+            new_job.start()
 
-            elif(len(jobs_1) > 0):
-                print("issuing job1 on core 2/3")
-                new_job = RunningJob(logger, jobs_23.pop())
-                new_job.start()
-                core_1.push(core_1)
+            running_3.append(new_job)
+            jobs.remove(priority)
 
+        has_paused_tasks = (len(running_1) > 0) and memecached_on_cpu1
+        if(has_paused_tasks and core_2 < 50 and core_3 < 50):
+            j = running_1[0]
+            j.update_cores("2-3")
+            j.resume()
+            running_1.remove(j)
+            running_2.append(j)
+            running_3.append(j)
+
+        elif(has_paused_tasks and core_2 < 50):
+            j = running_1[0]
+            j.update_cores("2")
+            j.resume()
+            running_1.remove(j)
+            running_2.append(j)
+
+        elif(has_paused_tasks and core_3 < 50):
+            j = running_1[0]
+            j.update_cores("2")
+            j.resume()
+            running_1.remove(j)
+            running_3.append(j)
+
+        print("jobs left: " + str(jobs))
 
         # check if running jobs have exited
-        running_0.filter(lambda j: (not j.is_finished()))
-        running_1.filter(lambda j: (not j.is_finished()))
-        running_2.filter(lambda j: (not j.is_finished()))
-        running_3.filter(lambda j: (not j.is_finished()))
+        running_0 = list(filter(lambda j: (not j.is_finished()), running_0))
+        running_1 = list(filter(lambda j: (not j.is_finished()), running_1))
+        running_2 = list(filter(lambda j: (not j.is_finished()), running_2))
+        running_3 = list(filter(lambda j: (not j.is_finished()), running_3))
         running = running_0 + running_1 + running_2 + running_3
 
-        print("running on core0: " + str(running_0))
-        print("running on core1: " + str(running_1))
-        print("running on core2: " + str(running_2))
-        print("running on core3: " + str(running_3))
+        print("running on core0: memcached")
+
+        out1 = "running on core1: "
+        if(memecached_on_cpu1):
+            out1 += "memcached "
+        for j in running_1:
+            out1 += j.toString()
+        print(out1)
+
+        out2 = "running on core2: "
+        for j in running_2:
+            out2 += j.toString()
+        print(out2)
+
+        out3 = "running on core3: "
+        for j in running_3:
+            out3 += j.toString()
+        print(out3)
 
         # check SLO
         memecached_on_cpu1 = check_SLO(pid_of_memcached, logger, memecached_on_cpu1, running_1)
         
+        print("------")
+
     logger.end()
     print("done")
 
