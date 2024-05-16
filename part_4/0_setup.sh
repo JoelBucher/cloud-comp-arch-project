@@ -179,7 +179,7 @@ install_mcperf () {
             output "generating script 3"
             echo "echo \"[process] starting client measure...\"" >> $SCRIPT_2
             echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a -- \"cd memcache-perf-dynamic && ./mcperf -s $memcache_server_ip --loadonly\"" >> $SCRIPT_2
-            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a -- \"cd memcache-perf-dynamic && ./mcperf -s $memcache_server_ip -a $client_agent_ip --noload -T 16 -C 4 -D 4 -Q 1000 -c 4 -t 1800 --qps_interval 10 --qps_min 5000 --qps_max 100000\"" >> $SCRIPT_2
+            echo "gcloud compute ssh --ssh-key-file ~/.ssh/cloud-computing ubuntu@$machine --zone europe-west3-a -- \"cd memcache-perf-dynamic && ./mcperf -s $memcache_server_ip -a $client_agent_ip --noload -T 16 -C 4 -D 4 -Q 1000 -c 4 -t 1800 --qps_interval 10 --qps_min 5000 --qps_max 100000 --qps_seed 3274\"" >> $SCRIPT_2
         fi
     done
 }

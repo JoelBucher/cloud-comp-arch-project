@@ -79,13 +79,13 @@ class RunningJob:
         self.container.unpause()
 
     def is_finished(self):
-        self.container.reload()
+        if(self.container.status != "exited"):
+            self.container.reload()
+            
         if(self.container.status == "exited"):
             self.logger.job_end(self.job)
             self.logger.custom_event(self.job, "container exit status: " + str(self.container.wait()['StatusCode']))
             self.container.remove()
-            self.container = None
-            self.job = None
             return 1
         else:
             return 0 
@@ -124,7 +124,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
 
     return memecached_on_cpu1
 
-
+clean_cpu = True
 def main():
     # need the pid of memcached to schedule it on different cores
     # python does not know global variables, hence, here they are
@@ -143,10 +143,14 @@ def main():
     running_2 = [] # jobs core
     running_3 = [] # jobs core
 
-    jobs = [Job.RADIX, Job.VIPS, Job.DEDUP, Job.BLACKSCHOLES, Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
+    jobs = [Job.RADIX, Job.VIPS, Job.BLACKSCHOLES, Job.DEDUP, Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
 
     while len(running + jobs) > 0:
         cpu_usage = get_cpu_usage()
+        clean_cpu1 = True
+        clean_cpu2 = True
+        clean_cpu3 = True
+
         core_0 = cpu_usage[0] # core is fully reserved for memcached
         core_1 = cpu_usage[1] # core where memcached has priority
         core_2 = cpu_usage[2] # jobs core
@@ -162,6 +166,7 @@ def main():
 
             running_1.append(new_job)
             jobs.remove(priority)
+            clean_cpu1 = False
 
         if(core_2 < 50 and (len(jobs) > 0)):
             priority = get_job(jobs,2)
@@ -170,6 +175,7 @@ def main():
 
             running_2.append(new_job)
             jobs.remove(priority)
+            clean_cpu2 = False
             
         if(core_3 < 50 and (len(jobs) > 0)):
             priority = get_job(jobs,3)
@@ -178,9 +184,10 @@ def main():
 
             running_3.append(new_job)
             jobs.remove(priority)
+            clean_cpu3 = False
 
-        has_paused_tasks = (len(running_1) > 0) and memecached_on_cpu1
-        if(has_paused_tasks and core_2 < 50 and core_3 < 50):
+        has_paused_tasks = (len(jobs) == 0) and (len(running_1) > 0) and memecached_on_cpu1
+        if(clean_cpu2 and clean_cpu3 and has_paused_tasks and core_2 < 50 and core_3 < 50):
             j = running_1[0]
             j.update_cores("2-3")
             j.resume()
@@ -188,27 +195,41 @@ def main():
             running_2.append(j)
             running_3.append(j)
 
-        elif(has_paused_tasks and core_2 < 50):
+        elif(clean_cpu2 and has_paused_tasks and core_2 < 50):
             j = running_1[0]
             j.update_cores("2")
             j.resume()
             running_1.remove(j)
             running_2.append(j)
 
-        elif(has_paused_tasks and core_3 < 50):
+        elif(clean_cpu3 and has_paused_tasks and core_3 < 50):
             j = running_1[0]
-            j.update_cores("2")
+            j.update_cores("3")
             j.resume()
             running_1.remove(j)
             running_3.append(j)
 
+        if(clean_cpu3 and (len(jobs) == 0) and (len(running_2) > 0) and (len(running_3) == 0)):
+            j = running_2[0]
+            j.pause()
+            j.update_cores("2-3")
+            j.resume()
+            running_3.append(j)
+        
+        if(clean_cpu2 and (len(jobs) == 0) and (len(running_3) > 0) and (len(running_2) == 0)):
+            j = running_3[0]
+            j.pause()
+            j.update_cores("2-3")
+            j.resume()
+            running_2.append(j)
+
         print("jobs left: " + str(jobs))
 
         # check if running jobs have exited
-        running_0 = list(filter(lambda j: (not j.is_finished()), running_0))
-        running_1 = list(filter(lambda j: (not j.is_finished()), running_1))
-        running_2 = list(filter(lambda j: (not j.is_finished()), running_2))
-        running_3 = list(filter(lambda j: (not j.is_finished()), running_3))
+        running_0 = list(filter(lambda j: ((not j.is_finished())), running_0))
+        running_1 = list(filter(lambda j: ((not j.is_finished())), running_1))
+        running_2 = list(filter(lambda j: ((not j.is_finished())), running_2))
+        running_3 = list(filter(lambda j: ((not j.is_finished())), running_3))
         running = running_0 + running_1 + running_2 + running_3
 
         print("running on core0: memcached")
