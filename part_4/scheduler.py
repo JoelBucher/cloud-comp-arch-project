@@ -75,8 +75,9 @@ class RunningJob:
             self.container.pause()
 
     def resume(self):
-        self.logger.job_unpause(self.job)
-        self.container.unpause()
+        if self.container != None and ((self.container.status == "paused") or (self.container.status == "Paused")) :
+            self.logger.job_unpause(self.job)
+            self.container.unpause()
 
     def is_finished(self):
         if(self.container.status != "exited"):
@@ -226,10 +227,10 @@ def main():
         print("jobs left: " + str(jobs))
 
         # check if running jobs have exited
-        running_0 = list(filter(lambda j: ((not j.is_finished())), running_0))
-        running_1 = list(filter(lambda j: ((not j.is_finished())), running_1))
-        running_2 = list(filter(lambda j: ((not j.is_finished())), running_2))
-        running_3 = list(filter(lambda j: ((not j.is_finished())), running_3))
+        running_0 = list(filter(lambda j: ((j is not None) and (not j.is_finished())), running_0))
+        running_1 = list(filter(lambda j: ((j is not None) and (not j.is_finished())), running_1))
+        running_2 = list(filter(lambda j: ((j is not None) and (not j.is_finished())), running_2))
+        running_3 = list(filter(lambda j: ((j is not None) and (not j.is_finished())), running_3))
         running = running_0 + running_1 + running_2 + running_3
 
         print("running on core0: memcached")
