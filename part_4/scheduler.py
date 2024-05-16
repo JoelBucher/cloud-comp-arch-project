@@ -9,19 +9,31 @@ client = docker.from_env()
 Job = scheduler_logger.Job
 
 configs = {
-    Job.BLACKSCHOLES: {"image": "anakli/cca:parsec_blackscholes", "threads": 1, "cores": [1]},
-    Job.CANNEAL: {"image": "anakli/cca:parsec_canneal", "threads": 4, "cores": [2,3]},
-    Job.DEDUP: {"image": "anakli/cca:parsec_dedup", "threads": 4, "cores": [1]},
-    Job.FERRET: {"image": "anakli/cca:parsec_ferret", "threads": 8, "cores": [2,3]},
-    Job.FREQMINE: {"image": "anakli/cca:parsec_freqmine", "threads": 8, "cores": [2,3]},
-    Job.VIPS: {"image": "anakli/cca:parsec_vips", "threads": 4, "cores": [1]},
-    Job.RADIX: {"image": "anakli/cca:splash2x_radix", "threads": 2, "cores": [1]}
+    Job.BLACKSCHOLES:   {"threads": 1, "priority": [1],     "image": "anakli/cca:parsec_blackscholes"},
+    Job.CANNEAL:        {"threads": 4, "priority": [2,3],   "image": "anakli/cca:parsec_canneal"},
+    Job.DEDUP:          {"threads": 4, "priority": [1],     "image": "anakli/cca:parsec_dedup"},
+    Job.FERRET:         {"threads": 8, "priority": [2,3],   "image": "anakli/cca:parsec_ferret"},
+    Job.FREQMINE:       {"threads": 8, "priority": [2,3],   "image": "anakli/cca:parsec_freqmine"},
+    Job.VIPS:           {"threads": 4, "priority": [1],     "image": "anakli/cca:parsec_vips"},
+    Job.RADIX:          {"threads": 2, "priority": [1],     "image": "anakli/cca:splash2x_radix"}
 }
 
 # transforms list of cpus [x,y,z] to cpuset of the form "x-z"
 def to_cpuset(cpus):
     cpus.sort()
     return str(cpus[0]) + "-" + str(cpus[-1])
+
+def get_job(jobs, core):
+    priority_jobs = jobs.filter(lambda j: core in configs[j]["priority"])
+
+    if(len(priority_jobs) > 0):
+        priority_job = priority_jobs[0] 
+    else:
+        priority_job = jobs[0]
+
+    jobs.remove(priority_job)
+    return jobs, priority_job
+
 
 class RunningJob:
     def __init__(self,logger,job):
@@ -134,7 +146,7 @@ def main():
     running_2 = [] # jobs core
     running_3 = [] # jobs core
 
-    jobs_1 = [Job.RADIX, Job.VIPS, Job.DEDUP, Job.BLACKSCHOLES] 
+    jobs = [Job.RADIX, Job.VIPS, Job.DEDUP, Job.BLACKSCHOLES] 
     jobs_23 = [Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
 
     while len(running + jobs_1 + jobs_23) > 0:
@@ -150,9 +162,18 @@ def main():
             core_1.push(core_1)
             
         if(core_2 < 50 or core_3 < 50):
-            new_job = RunningJob(logger, jobs_23.pop())
-            new_job.start()
-            core_1.push(core_1)
+            if(len(jobs_23) > 0):
+                print("issuing job23 on core 2/3")
+                new_job = RunningJob(logger, jobs_23.pop())
+                new_job.start()
+                core_1.push(core_1)
+
+            elif(len(jobs_1) > 0):
+                print("issuing job1 on core 2/3")
+                new_job = RunningJob(logger, jobs_23.pop())
+                new_job.start()
+                core_1.push(core_1)
+
 
         # check if running jobs have exited
         running_0.filter(lambda j: (not j.is_finished()))
