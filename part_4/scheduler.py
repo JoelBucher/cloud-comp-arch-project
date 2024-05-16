@@ -70,12 +70,14 @@ class RunningJob:
         self.container.update(cpuset_cpus=new_cores)
     
     def pause(self):
+        self.container.reload()
         if self.container != None and self.container.status == "running":
             self.logger.job_pause(self.job)
             self.container.pause()
 
     def resume(self):
-        if self.container != None and ((self.container.status == "paused") or (self.container.status == "Paused")) :
+        self.container.reload()
+        if self.container != None and ((self.container.status == "paused")) :
             self.logger.job_unpause(self.job)
             self.container.unpause()
 
@@ -212,14 +214,12 @@ def main():
 
         if(clean_cpu3 and (len(jobs) == 0) and (len(running_2) > 0) and (len(running_3) == 0)):
             j = running_2[0]
-            j.pause()
             j.update_cores("2-3")
             j.resume()
             running_3.append(j)
         
         if(clean_cpu2 and (len(jobs) == 0) and (len(running_3) > 0) and (len(running_2) == 0)):
             j = running_3[0]
-            j.pause()
             j.update_cores("2-3")
             j.resume()
             running_2.append(j)
