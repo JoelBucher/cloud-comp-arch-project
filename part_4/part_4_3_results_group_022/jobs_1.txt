@@ -1,0 +1,66 @@
+2024-05-17T16:41:01.325926 start scheduler
+2024-05-17T16:41:01.348162 start memcached [0] 2
+2024-05-17T16:41:01.348187 start freqmine [2] 2
+2024-05-17T16:41:01.574092 update_cores freqmine [2,3]
+2024-05-17T16:41:04.596601 start vips [1] 1
+2024-05-17T16:41:11.715048 update_cores memcached [0,1]
+2024-05-17T16:41:11.719217 pause vips
+2024-05-17T16:42:03.110365 update_cores memcached [0]
+2024-05-17T16:42:03.112181 unpause vips
+2024-05-17T16:42:12.196645 update_cores memcached [0,1]
+2024-05-17T16:42:12.200054 pause vips
+2024-05-17T16:42:23.313641 update_cores memcached [0]
+2024-05-17T16:42:23.315426 unpause vips
+2024-05-17T16:42:32.391614 update_cores memcached [0,1]
+2024-05-17T16:42:32.393542 pause vips
+2024-05-17T16:43:21.737513 update_cores memcached [0]
+2024-05-17T16:43:21.739586 unpause vips
+2024-05-17T16:43:32.827475 update_cores memcached [0,1]
+2024-05-17T16:43:32.831498 pause vips
+2024-05-17T16:44:49.309649 end freqmine
+2024-05-17T16:44:49.311048 custom freqmine container+exit+status%3A+0
+2024-05-17T16:44:51.372763 start canneal [2] 2
+2024-05-17T16:44:51.617894 start radix [3] 2
+2024-05-17T16:45:23.062878 update_cores memcached [0]
+2024-05-17T16:45:23.065022 unpause vips
+2024-05-17T16:45:26.117811 update_cores memcached [0,1]
+2024-05-17T16:45:26.120318 pause vips
+2024-05-17T16:45:28.140684 start ferret [3] 2
+2024-05-17T16:45:28.399306 end radix
+2024-05-17T16:45:28.400550 custom radix container+exit+status%3A+0
+2024-05-17T16:48:22.486080 update_cores memcached [0]
+2024-05-17T16:48:22.488625 unpause vips
+2024-05-17T16:48:25.534521 update_cores memcached [0,1]
+2024-05-17T16:48:25.537051 pause vips
+2024-05-17T16:48:28.599710 update_cores memcached [0]
+2024-05-17T16:48:28.601527 unpause vips
+2024-05-17T16:48:31.656513 update_cores memcached [0,1]
+2024-05-17T16:48:31.658775 pause vips
+2024-05-17T16:48:45.768222 start blackscholes [2] 1
+2024-05-17T16:48:46.212184 end canneal
+2024-05-17T16:48:46.214206 custom canneal container+exit+status%3A+0
+2024-05-17T16:49:33.594020 update_cores memcached [0]
+2024-05-17T16:49:33.596740 unpause vips
+2024-05-17T16:49:36.645575 update_cores memcached [0,1]
+2024-05-17T16:49:36.648651 pause vips
+2024-05-17T16:49:39.708416 update_cores memcached [0]
+2024-05-17T16:49:39.710122 unpause vips
+2024-05-17T16:49:42.762760 update_cores memcached [0,1]
+2024-05-17T16:49:42.765162 pause vips
+2024-05-17T16:49:53.874013 update_cores memcached [0]
+2024-05-17T16:49:53.875780 unpause vips
+2024-05-17T16:50:02.951070 update_cores memcached [0,1]
+2024-05-17T16:50:02.953694 pause vips
+2024-05-17T16:50:20.333768 end blackscholes
+2024-05-17T16:50:20.335543 custom blackscholes container+exit+status%3A+0
+2024-05-17T16:50:22.514130 start dedup [2] 1
+2024-05-17T16:51:03.228869 update_cores vips [2]
+2024-05-17T16:51:03.966841 unpause vips
+2024-05-17T16:51:06.302016 end dedup
+2024-05-17T16:51:06.305056 custom dedup container+exit+status%3A+0
+2024-05-17T16:51:34.428167 end ferret
+2024-05-17T16:51:34.429782 custom ferret container+exit+status%3A+0
+2024-05-17T16:51:36.596687 update_cores vips [2,3]
+2024-05-17T16:51:48.680849 end vips
+2024-05-17T16:51:48.681944 custom vips container+exit+status%3A+0
+2024-05-17T16:51:50.153032 end scheduler
