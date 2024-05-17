@@ -140,6 +140,8 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         time.sleep(1) # code will crash without this
     
 
+    return memecached_on_cpu1
+'''
     if memecached_on_cpu1 and (current_cpu_usage[1] >= 80):
         # if needed, stop job at cpu 1
         for j in concurrent_jobs:
@@ -149,9 +151,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         # resume jop that is still on cpu 1 
         for j in concurrent_jobs:
             j.resume()
-
-    return memecached_on_cpu1
-
+'''
 
 clean_cpu = True
 def main():
