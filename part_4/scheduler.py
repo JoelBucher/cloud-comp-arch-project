@@ -59,7 +59,7 @@ class RunningJob:
                 detach= True,
                 remove= False,
                 name= self.job.value,
-                cpu_shares = 10
+                cpu_shares = 256
             )
         else:
             self.container = client.containers.run(
@@ -69,7 +69,7 @@ class RunningJob:
                 detach= True,
                 remove= False,
                 name= self.name,
-                cpu_shares = 10
+                cpu_shares = 256
             )
 
     # new_core_Set has to be a string "0-3" or "2"
@@ -123,31 +123,36 @@ def get_cpu_usage():
 def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
     current_cpu_usage = get_cpu_usage()
 
-    if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 48):
+    if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 30):
         # shedule memechached on cpu 1 as well
         os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
         logger.update_cores(Job.MEMCACHED, "0-1")
-
-        # if needed, stop job at cpu 1
-        for j in concurrent_jobs:
-            j.pause()
-        
+ 
         memecached_on_cpu1 = True
-        time.sleep(3) 
+        time.sleep(1) 
 
     elif (memecached_on_cpu1) and (current_cpu_usage[1] <= 25):
         # shedule memechached on cpu 0 only
         os.system(f"sudo taskset -a -cp 0 {pid_of_memcached}")
         logger.update_cores(Job.MEMCACHED, "0")
         
+        memecached_on_cpu1 = False
+        time.sleep(1) # code will crash without this
+    
+
+    return memecached_on_cpu1
+'''
+    if memecached_on_cpu1 and (current_cpu_usage[1] >= 80):
+        # if needed, stop job at cpu 1
+        for j in concurrent_jobs:
+            j.pause()
+
+    if (current_cpu_usage[1] <= 50):
         # resume jop that is still on cpu 1 
         for j in concurrent_jobs:
             j.resume()
-            
-        memecached_on_cpu1 = False
-        time.sleep(1) # code will crash without this
-
-    return memecached_on_cpu1
+    
+'''
 
 clean_cpu = True
 def main():
