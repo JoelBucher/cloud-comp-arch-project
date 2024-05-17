@@ -73,10 +73,10 @@ class RunningJob:
             )
 
     # new_core_Set has to be a string "0-3" or "2"
-    def update_cores(self, new_cores):
+    def update_cores(self, new_cores, core_list):
         if self.exited:
             return 
-        self.logger.update_cores(self.job,new_cores)
+        self.logger.update_cores(self.job,core_list)
         self.cpuset_cpus = new_cores 
         self.container.update(cpuset_cpus=new_cores)
     
@@ -128,6 +128,10 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
         logger.update_cores(Job.MEMCACHED, ["0", "1"])
  
+        # if needed, stop job at cpu 1
+        for j in concurrent_jobs:
+            j.pause()
+
         memecached_on_cpu1 = True
         time.sleep(1) 
 
@@ -136,18 +140,11 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         os.system(f"sudo taskset -a -cp 0 {pid_of_memcached}")
         logger.update_cores(Job.MEMCACHED, "0")
         
-        memecached_on_cpu1 = False
-        time.sleep(1) # code will crash without this
-    
-    if memecached_on_cpu1 and (current_cpu_usage[1] >= 80):
-        # if needed, stop job at cpu 1
-        for j in concurrent_jobs:
-            j.pause()
-
-    if (current_cpu_usage[1] <= 60):
-        # resume jop that is still on cpu 1 
         for j in concurrent_jobs:
             j.resume()
+
+        memecached_on_cpu1 = False
+        time.sleep(1) # code will crash without this
 
     return memecached_on_cpu1
 
@@ -170,8 +167,17 @@ def main():
     running_2 = [] # jobs core
     running_3 = [] # jobs core
 
-    jobs = [Job.CANNEAL, Job.RADIX, Job.VIPS, Job.BLACKSCHOLES, Job.DEDUP, Job.FERRET, Job.FREQMINE] 
+    jobs = [Job.CANNEAL, Job.RADIX, Job.VIPS, Job.BLACKSCHOLES, Job.DEDUP, Job.FERRET] 
 
+    freqmine = RunningJob(logger, Job.FREQMINE, 2)
+    freqmine.start()
+    freqmine.update_cores("2-3", ["2","3"])
+    freqmine.resume()
+    running_2.append(freqmine)
+    running_3.append(freqmine)
+    time.sleep(2)
+
+    
     while len(running + jobs) > 0:
         cpu_usage = get_cpu_usage()
         clean_cpu1 = True
@@ -216,7 +222,7 @@ def main():
         has_paused_tasks = (len(jobs) == 0) and (len(running_1) > 0) and memecached_on_cpu1
         if(clean_cpu2 and clean_cpu3 and has_paused_tasks and core_2 < 50 and core_3 < 50):
             j = running_1[0]
-            j.update_cores(["2","3"])
+            j.update_cores("2-3", ["2","3"])
             j.resume()
             running_1.remove(j)
             running_2.append(j)
@@ -224,27 +230,27 @@ def main():
 
         elif(clean_cpu2 and has_paused_tasks and core_2 < 50):
             j = running_1[0]
-            j.update_cores("2")
+            j.update_cores("2",  ["2"])
             j.resume()
             running_1.remove(j)
             running_2.append(j)
 
         elif(clean_cpu3 and has_paused_tasks and core_3 < 50):
             j = running_1[0]
-            j.update_cores("3")
+            j.update_cores("3",  ["3"])
             j.resume()
             running_1.remove(j)
             running_3.append(j)
 
         if(clean_cpu3 and (len(jobs) == 0) and (len(running_2) > 0) and (len(running_3) == 0)):
             j = running_2[0]
-            j.update_cores(["2","3"])
+            j.update_cores("2-3", ["2","3"])
             j.resume()
             running_3.append(j)
         
         if(clean_cpu2 and (len(jobs) == 0) and (len(running_3) > 0) and (len(running_2) == 0)):
             j = running_3[0]
-            j.update_cores(["2","3"])
+            j.update_cores("2-3", ["2","3"])
             j.resume()
             running_2.append(j)
 
