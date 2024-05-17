@@ -13,8 +13,8 @@ configs = {
     Job.BLACKSCHOLES:   {"threads": 1, "priority": [1],     "image": "anakli/cca:parsec_blackscholes"},
     Job.CANNEAL:        {"threads": 4, "priority": [2,3],   "image": "anakli/cca:parsec_canneal"},
     Job.DEDUP:          {"threads": 4, "priority": [1],     "image": "anakli/cca:parsec_dedup"},
-    Job.FERRET:         {"threads": 8, "priority": [2,3],   "image": "anakli/cca:parsec_ferret"},
-    Job.FREQMINE:       {"threads": 8, "priority": [2,3],   "image": "anakli/cca:parsec_freqmine"},
+    Job.FERRET:         {"threads": 4, "priority": [2,3],   "image": "anakli/cca:parsec_ferret"},
+    Job.FREQMINE:       {"threads": 4, "priority": [2,3],   "image": "anakli/cca:parsec_freqmine"},
     Job.VIPS:           {"threads": 4, "priority": [1],     "image": "anakli/cca:parsec_vips"},
     Job.RADIX:          {"threads": 2, "priority": [1],     "image": "anakli/cca:splash2x_radix"}
 }
@@ -37,12 +37,19 @@ class RunningJob:
         self.cores = str(core)
         self.image = configs[job]["image"]
         self.threads = configs[job]["threads"]
+        self.exited = False
     
     def toString(self):
+
+        if self.exited:
+            return ""
+
         self.container.reload()
         return "[%s] %s (%s)" % (self.container.status, self.name, self.cores)
 
     def start(self):
+        if self.exited:
+            return 
         self.logger.job_start(self.job, self.cores, self.threads)
         if self.name == "radix":
                 self.container = client.containers.run(
@@ -51,7 +58,8 @@ class RunningJob:
                 cpuset_cpus= self.cores,
                 detach= True,
                 remove= False,
-                name= self.job.value
+                name= self.job.value,
+                cpu_shares = 10
             )
         else:
             self.container = client.containers.run(
@@ -60,28 +68,41 @@ class RunningJob:
                 cpuset_cpus= self.cores,
                 detach= True,
                 remove= False,
-                name= self.name
+                name= self.name,
+                cpu_shares = 10
             )
 
     # new_core_Set has to be a string "0-3" or "2"
     def update_cores(self, new_cores):
+        if self.exited:
+            return 
         self.logger.update_cores(self.job,new_cores)
         self.cpuset_cpus = new_cores 
         self.container.update(cpuset_cpus=new_cores)
     
     def pause(self):
+        if self.exited:
+            return 
+        
         self.container.reload()
         if self.container != None and self.container.status == "running":
             self.logger.job_pause(self.job)
             self.container.pause()
 
     def resume(self):
+        if self.exited:
+            return 
+
         self.container.reload()
         if self.container != None and ((self.container.status == "paused")) :
             self.logger.job_unpause(self.job)
             self.container.unpause()
 
     def is_finished(self):
+
+        if self.exited:
+            return 1 
+
         if(self.container.status != "exited"):
             self.container.reload()
             
@@ -89,6 +110,7 @@ class RunningJob:
             self.logger.job_end(self.job)
             self.logger.custom_event(self.job, "container exit status: " + str(self.container.wait()['StatusCode']))
             self.container.remove()
+            self.exited = True
             return 1
         else:
             return 0 
@@ -101,7 +123,7 @@ def get_cpu_usage():
 def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
     current_cpu_usage = get_cpu_usage()
 
-    if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 70):
+    if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 48):
         # shedule memechached on cpu 1 as well
         os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
         logger.update_cores(Job.MEMCACHED, "0-1")
@@ -113,7 +135,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         memecached_on_cpu1 = True
         time.sleep(3) 
 
-    elif (memecached_on_cpu1) and (current_cpu_usage[1] <= 50):
+    elif (memecached_on_cpu1) and (current_cpu_usage[1] <= 25):
         # shedule memechached on cpu 0 only
         os.system(f"sudo taskset -a -cp 0 {pid_of_memcached}")
         logger.update_cores(Job.MEMCACHED, "0")
