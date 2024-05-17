@@ -42,7 +42,8 @@ class RunningJob:
                 cpuset_cpus= to_cpuset(self.cores),
                 detach= True,
                 remove= False,
-                name= self.job.value
+                name= self.job.value,
+                cpu_shares = 10
             )
         else:
             self.container = client.containers.run(
@@ -51,7 +52,8 @@ class RunningJob:
                 cpuset_cpus= to_cpuset(self.cores),
                 detach= True,
                 remove= False,
-                name= self.name
+                name= self.name,
+                cpu_shares = 10
             )
 
     # new_core_Set has to be a string "0-3" or "2"
@@ -70,6 +72,9 @@ class RunningJob:
         self.container.unpause()
 
     def is_finished(self):
+        if self.container == None:
+            return 0
+        
         self.container.reload()
         if(self.container.status == "exited"):
             self.logger.job_end(self.job)
@@ -133,6 +138,8 @@ def main():
     running_1 = [] # core where memcached has priority
     running_2 = [] # jobs core
     running_3 = [] # jobs core
+
+    running = []
 
     jobs_1 = [Job.RADIX, Job.VIPS, Job.DEDUP, Job.BLACKSCHOLES] 
     jobs_23 = [Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
