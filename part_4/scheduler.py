@@ -126,7 +126,7 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
     if (not memecached_on_cpu1) and (current_cpu_usage[0] >= 30):
         # shedule memechached on cpu 1 as well
         os.system(f"sudo taskset -a -cp 0-1 {pid_of_memcached}")
-        logger.update_cores(Job.MEMCACHED, "0-1")
+        logger.update_cores(Job.MEMCACHED, ["0", "1"])
  
         memecached_on_cpu1 = True
         time.sleep(1) 
@@ -139,19 +139,17 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         memecached_on_cpu1 = False
         time.sleep(1) # code will crash without this
     
-
-    return memecached_on_cpu1
-'''
     if memecached_on_cpu1 and (current_cpu_usage[1] >= 80):
         # if needed, stop job at cpu 1
         for j in concurrent_jobs:
             j.pause()
 
-    if (current_cpu_usage[1] <= 50):
+    if (current_cpu_usage[1] <= 60):
         # resume jop that is still on cpu 1 
         for j in concurrent_jobs:
             j.resume()
-'''
+
+    return memecached_on_cpu1
 
 clean_cpu = True
 def main():
@@ -172,7 +170,7 @@ def main():
     running_2 = [] # jobs core
     running_3 = [] # jobs core
 
-    jobs = [Job.RADIX, Job.VIPS, Job.BLACKSCHOLES, Job.DEDUP, Job.FERRET, Job.FREQMINE, Job.CANNEAL] 
+    jobs = [Job.CANNEAL, Job.RADIX, Job.VIPS, Job.BLACKSCHOLES, Job.DEDUP, Job.FERRET, Job.FREQMINE] 
 
     while len(running + jobs) > 0:
         cpu_usage = get_cpu_usage()
@@ -218,7 +216,7 @@ def main():
         has_paused_tasks = (len(jobs) == 0) and (len(running_1) > 0) and memecached_on_cpu1
         if(clean_cpu2 and clean_cpu3 and has_paused_tasks and core_2 < 50 and core_3 < 50):
             j = running_1[0]
-            j.update_cores("2-3")
+            j.update_cores(["2","3"])
             j.resume()
             running_1.remove(j)
             running_2.append(j)
@@ -240,13 +238,13 @@ def main():
 
         if(clean_cpu3 and (len(jobs) == 0) and (len(running_2) > 0) and (len(running_3) == 0)):
             j = running_2[0]
-            j.update_cores("2-3")
+            j.update_cores(["2","3"])
             j.resume()
             running_3.append(j)
         
         if(clean_cpu2 and (len(jobs) == 0) and (len(running_3) > 0) and (len(running_2) == 0)):
             j = running_3[0]
-            j.update_cores("2-3")
+            j.update_cores(["2","3"])
             j.resume()
             running_2.append(j)
 
