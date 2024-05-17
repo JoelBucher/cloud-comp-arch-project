@@ -11,12 +11,12 @@ Job = scheduler_logger.Job
 
 configs = {
     Job.BLACKSCHOLES:   {"threads": 1, "priority": [1],     "image": "anakli/cca:parsec_blackscholes"},
-    Job.CANNEAL:        {"threads": 4, "priority": [2,3],   "image": "anakli/cca:parsec_canneal"},
-    Job.DEDUP:          {"threads": 4, "priority": [1],     "image": "anakli/cca:parsec_dedup"},
-    Job.FERRET:         {"threads": 4, "priority": [2,3],   "image": "anakli/cca:parsec_ferret"},
-    Job.FREQMINE:       {"threads": 4, "priority": [2,3],   "image": "anakli/cca:parsec_freqmine"},
-    Job.VIPS:           {"threads": 4, "priority": [1],     "image": "anakli/cca:parsec_vips"},
-    Job.RADIX:          {"threads": 2, "priority": [1],     "image": "anakli/cca:splash2x_radix"}
+    Job.CANNEAL:        {"threads": 2, "priority": [2,3],   "image": "anakli/cca:parsec_canneal"},
+    Job.DEDUP:          {"threads": 1, "priority": [1],     "image": "anakli/cca:parsec_dedup"},
+    Job.FERRET:         {"threads": 2, "priority": [2,3],   "image": "anakli/cca:parsec_ferret"},
+    Job.FREQMINE:       {"threads": 2, "priority": [2,3],   "image": "anakli/cca:parsec_freqmine"},
+    Job.VIPS:           {"threads": 1, "priority": [1],     "image": "anakli/cca:parsec_vips"},
+    Job.RADIX:          {"threads": 2, "priority": [2,3],   "image": "anakli/cca:splash2x_radix"}
 }
 
 def get_job(jobs, core):
@@ -59,7 +59,7 @@ class RunningJob:
                 detach= True,
                 remove= False,
                 name= self.job.value,
-                cpu_shares = 256
+                cpu_shares = 10
             )
         else:
             self.container = client.containers.run(
@@ -69,7 +69,7 @@ class RunningJob:
                 detach= True,
                 remove= False,
                 name= self.name,
-                cpu_shares = 256
+                cpu_shares = 10
             )
 
     # new_core_Set has to be a string "0-3" or "2"
@@ -140,8 +140,6 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         time.sleep(1) # code will crash without this
     
 
-    return memecached_on_cpu1
-'''
     if memecached_on_cpu1 and (current_cpu_usage[1] >= 80):
         # if needed, stop job at cpu 1
         for j in concurrent_jobs:
@@ -151,8 +149,9 @@ def check_SLO(pid_of_memcached, logger, memecached_on_cpu1, concurrent_jobs):
         # resume jop that is still on cpu 1 
         for j in concurrent_jobs:
             j.resume()
-    
-'''
+
+    return memecached_on_cpu1
+
 
 clean_cpu = True
 def main():
